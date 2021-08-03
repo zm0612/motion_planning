@@ -25,10 +25,23 @@ protected:
     GridNodePtr terminatePtr;
     std::multimap<double, GridNodePtr> openSet;
 
+    /*!
+     * 启发式函数
+     * @param node1
+     * @param node2
+     * @return
+     */
     double getHeu(GridNodePtr node1, GridNodePtr node2);
 
-    void
-    AstarGetSucc(GridNodePtr currentPtr, std::vector<GridNodePtr> &neighborPtrSets, std::vector<double> &edgeCostSets);
+    /*!
+     * 扩展节点函数
+     * @param currentPtr
+     * @param neighborPtrSets
+     * @param edgeCostSets
+     */
+    void AstarGetSucc(GridNodePtr currentPtr,
+                      std::vector<GridNodePtr> &neighborPtrSets,
+                      std::vector<double> &edgeCostSets);
 
     bool isOccupied(const int &idx_x, const int &idx_y, const int &idx_z) const;
 
@@ -47,6 +60,11 @@ public:
 
     ~AstarPathFinder() {};
 
+    /*!
+     * A* 搜索算法
+     * @param start_pt
+     * @param end_pt
+     */
     void AstarGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end_pt);
 
     void resetGrid(GridNodePtr ptr);

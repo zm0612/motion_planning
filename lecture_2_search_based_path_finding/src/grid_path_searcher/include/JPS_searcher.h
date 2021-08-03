@@ -21,10 +21,22 @@ class JPSPathFinder: public AstarPathFinder
     	~JPSPathFinder(){
     		delete jn3d;
     	};
+
+        /*!
+         * JPS的扩展节点函数
+         * @param currentPtr
+         * @param neighborPtrSets
+         * @param edgeCostSets
+         */
 		void JPSGetSucc(GridNodePtr currentPtr, std::vector<GridNodePtr> & neighborPtrSets, std::vector<double> & edgeCostSets);
         bool hasForced(const Eigen::Vector3i & idx, const Eigen::Vector3i & dir);
         bool jump(const Eigen::Vector3i & curIdx, const Eigen::Vector3i & expDir, Eigen::Vector3i & neiIdx);
-		
+
+        /*!
+         * JPS搜索算法函数
+         * @param start_pt
+         * @param end_pt
+         */
     	void JPSGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end_pt);
 };
 

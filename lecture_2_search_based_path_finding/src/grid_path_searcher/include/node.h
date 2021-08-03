@@ -14,11 +14,11 @@ typedef GridNode* GridNodePtr;
 struct GridNode
 {     
     int id;        // 1--> open set, -1 --> closed set
-    Eigen::Vector3d coord; 
-    Eigen::Vector3i dir;   // direction of expanding
+    Eigen::Vector3d coord; //坐标
+    Eigen::Vector3i dir;   // direction of expanding, only for JPS
     Eigen::Vector3i index;
 	
-    double gScore, fScore;
+    double gScore, fScore; //g(n), f(n)
     GridNodePtr cameFrom;
     std::multimap<double, GridNodePtr>::iterator nodeMapIt;
 
