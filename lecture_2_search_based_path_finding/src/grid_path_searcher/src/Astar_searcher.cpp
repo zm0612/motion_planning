@@ -3,8 +3,8 @@
 using namespace std;
 using namespace Eigen;
 
-void AstarPathFinder::initGridMap(double _resolution, Vector3d global_xyz_l, Vector3d global_xyz_u, int max_x_id,
-                                  int max_y_id, int max_z_id) {
+void AstarPathFinder::initGridMap(double _resolution, Vector3d global_xyz_l, Vector3d global_xyz_u,
+                                  int max_x_id, int max_y_id, int max_z_id) {
     gl_xl = global_xyz_l(0);
     gl_yl = global_xyz_l(1);
     gl_zl = global_xyz_l(2);
@@ -89,8 +89,14 @@ Vector3d AstarPathFinder::gridIndex2coord(const Vector3i &index) {
     return pt;
 }
 
+/*!
+ * 将坐标值转换为栅格坐标
+ * @param pt
+ * @return
+ */
 Vector3i AstarPathFinder::coord2gridIndex(const Vector3d &pt) {
     Vector3i idx;
+    //max min是为了防止栅格点处在地图范围之外
     idx << min(max(int((pt(0) - gl_xl) * inv_resolution), 0), GLX_SIZE - 1),
             min(max(int((pt(1) - gl_yl) * inv_resolution), 0), GLY_SIZE - 1),
             min(max(int((pt(2) - gl_zl) * inv_resolution), 0), GLZ_SIZE - 1);
@@ -131,6 +137,28 @@ inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr, vector<GridNod
     *
     *
     */
+    for (int dx = -1; dx <= 1; ++dx) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dz = -1; dz <= 1; ++dz) {
+                Eigen::Vector3i idx = currentPtr->index + Eigen::Vector3i(dx, dy, dz);
+
+                if (idx == currentPtr->index)
+                    continue;
+
+                if (idx.x() < 0 || idx.x() >= GLX_SIZE ||
+                    idx.y() < 0 || idx.y() >= GLY_SIZE ||
+                    idx.z() < 0 || idx.z() >= GLZ_SIZE)
+                    continue;
+
+                Eigen::Vector3d pt = gridIndex2coord(idx);
+                GridNode* grid_node = new GridNode(idx, pt);
+                neighborPtrSets.emplace_back(grid_node);
+
+                double edge_cost = (pt - currentPtr->coord).norm();
+                edgeCostSets.emplace_back(edge_cost);
+            }
+        }
+    }
 }
 
 double AstarPathFinder::getHeu(GridNodePtr node1, GridNodePtr node2) {
@@ -146,8 +174,38 @@ double AstarPathFinder::getHeu(GridNodePtr node1, GridNodePtr node2) {
     *
     *
     */
+#define sqrt_3 1.7320508
+#define sqrt_2 1.4142136
 
-    return 0;
+    double h;
+
+    enum class HeuristicFunctionType {
+        Manhattan = 0, Euclidean, Diagonal, Dijkstra
+    };
+
+    constexpr HeuristicFunctionType heuristic_function_type = HeuristicFunctionType::Manhattan;
+    if (heuristic_function_type == HeuristicFunctionType::Manhattan) {
+        h = (node2->coord - node1->coord).lpNorm<1>();
+    } else if (heuristic_function_type == HeuristicFunctionType::Euclidean) {
+        h = (node2->coord - node1->coord).norm();
+    } else if (heuristic_function_type == HeuristicFunctionType::Diagonal) {
+        double dx = std::abs(node1->coord.x() - node2->coord.x());
+        double dy = std::abs(node1->coord.y() - node2->coord.y());
+        double dz = std::abs(node1->coord.z() - node2->coord.z());
+        double min_xyz = std::min({dx, dy, dz});
+        double max_xyz = std::max({dx, dy, dz});
+        double mid_xyz = dx + dy + dz - min_xyz - max_xyz;
+        h = (sqrt_3 - sqrt_2) * min_xyz + (sqrt_2 - 1) * mid_xyz + max_xyz;
+    } else if (heuristic_function_type == HeuristicFunctionType::Dijkstra) {
+        h = 0.0;
+    }
+
+    constexpr bool use_tie_breaker = false;
+    if (use_tie_breaker) {
+        h = h * 1.01;
+    }
+
+    return h;
 }
 
 void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
@@ -196,24 +254,25 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
         *
         step 3: Remove the node with lowest cost function from open set to closed set
         please write your code below
-        
         IMPORTANT NOTE!!!
         This part you should use the C++ STL: multimap, more details can be find in Homework description
         *
         *
         */
+        currentPtr = openSet.begin()->second;
+        openSet.erase(openSet.begin());
 
         // if the current node is the goal 
         if (currentPtr->index == goalIdx) {
             ros::Time time_2 = ros::Time::now();
             terminatePtr = currentPtr;
-            ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m", (time_2 - time_1).toSec() * 1000.0,
-                     currentPtr->gScore * resolution);
+            ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m",
+                     (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution);
             return;
         }
         //get the succetion
-        AstarGetSucc(currentPtr, neighborPtrSets,
-                     edgeCostSets);  //STEP 4: finish AstarPathFinder::AstarGetSucc yourself
+        //STEP 4: finish AstarPathFinder::AstarGetSucc yourself
+        AstarGetSucc(currentPtr, neighborPtrSets, edgeCostSets);
 
         /*
         *
