@@ -167,7 +167,7 @@ double AstarPathFinder::getHeu(GridNodePtr node1, GridNodePtr node2) {
 #define sqrt_3 1.7320508
 #define sqrt_2 1.4142136
 
-    double h;
+    double h = 0.0;
 
     if (heuristic_function_type == HeuristicFunctionType::Manhattan) {
         h = (node2->index - node1->index).lpNorm<1>();
@@ -185,7 +185,6 @@ double AstarPathFinder::getHeu(GridNodePtr node1, GridNodePtr node2) {
         h = 0.0;
     }
 
-    constexpr bool use_tie_breaker = false;
     if (use_tie_breaker) {
         h = h * 1.01;
     }
@@ -307,6 +306,7 @@ vector<Vector3d> AstarPathFinder::getPath() {
 void AstarPathFinder::SetHeuristic(const ros::NodeHandle &nh) {
     std::string heu_type;
     nh.getParam("heuristic_type", heu_type);
+    nh.getParam("use_tie_breaker", use_tie_breaker);
 
 //    Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3
     if (heu_type == "Manhattan"){
