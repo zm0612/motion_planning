@@ -68,7 +68,7 @@ void rcvWaypointsCallback(const nav_msgs::Path &wp) {
 }
 
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
-    //如果有地图就不在往下执行
+    //如果有地图就不再往下执行
     if (_has_map) return;
 
     pcl::PointCloud<pcl::PointXYZ> cloud;
@@ -193,6 +193,7 @@ int main(int argc, char **argv) {
     ros::Rate rate(100);
     bool status = ros::ok();
     while (status) {
+        _astar_path_finder->SetHeuristic(nh);
         ros::spinOnce();
         status = ros::ok();
         rate.sleep();

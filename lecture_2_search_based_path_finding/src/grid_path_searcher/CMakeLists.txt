@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(grid_path_searcher)
 
+set(CMAKE_BUILD_TYPE Release)
+
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs

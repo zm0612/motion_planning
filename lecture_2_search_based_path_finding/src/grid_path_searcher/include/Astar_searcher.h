@@ -10,6 +10,10 @@
 
 class AstarPathFinder {
 private:
+    enum class HeuristicFunctionType {
+        Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3
+    };
+    HeuristicFunctionType heuristic_function_type = HeuristicFunctionType::Euclidean;
 
 protected:
     uint8_t *data;
@@ -60,6 +64,7 @@ public:
 
     ~AstarPathFinder() {};
 
+    void SetHeuristic(const ros::NodeHandle& nh);
     /*!
      * A* 搜索算法
      * @param start_pt

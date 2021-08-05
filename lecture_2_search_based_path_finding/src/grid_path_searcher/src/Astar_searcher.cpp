@@ -75,7 +75,7 @@ vector<Vector3d> AstarPathFinder::getVisitedNodes() {
                     visited_nodes.push_back(GridNodeMap[i][j][k]->coord);
             }
 
-    ROS_WARN("visited_nodes size : %d", visited_nodes.size());
+    ROS_INFO("\033[1;32m --> visited_nodes size : %d \033[0m", visited_nodes.size());
     return visited_nodes;
 }
 
@@ -130,13 +130,8 @@ inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr, vector<GridNod
                                           vector<double> &edgeCostSets) {
     neighborPtrSets.clear();
     edgeCostSets.clear();
-    /*
-    *
-    STEP 4: finish AstarPathFinder::AstarGetSucc yourself 
-    please write your code below
-    *
-    *
-    */
+
+    //Step 4
     for (int dx = -1; dx <= 1; ++dx) {
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dz = -1; dz <= 1; ++dz) {
@@ -150,11 +145,18 @@ inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr, vector<GridNod
                     idx.z() < 0 || idx.z() >= GLZ_SIZE)
                     continue;
 
-                Eigen::Vector3d pt = gridIndex2coord(idx);
-                GridNodePtr grid_node = new GridNode(idx, pt);
-                neighborPtrSets.emplace_back(grid_node);
+                if (isOccupied(idx)){
+                    continue;
+                }
 
-                double edge_cost = (pt - currentPtr->coord).norm();
+                GridNodePtr temp_grid_node = GridNodeMap[idx.x()][idx.y()][idx.z()];
+                if (temp_grid_node->id == -1){
+                    continue;
+                }
+
+                neighborPtrSets.emplace_back(temp_grid_node);
+
+                double edge_cost = (temp_grid_node->index - currentPtr->index).norm();
                 edgeCostSets.emplace_back(edge_cost);
             }
         }
@@ -167,19 +169,14 @@ double AstarPathFinder::getHeu(GridNodePtr node1, GridNodePtr node2) {
 
     double h;
 
-    enum class HeuristicFunctionType {
-        Manhattan = 0, Euclidean, Diagonal, Dijkstra
-    };
-
-    constexpr HeuristicFunctionType heuristic_function_type = HeuristicFunctionType::Manhattan;
     if (heuristic_function_type == HeuristicFunctionType::Manhattan) {
-        h = (node2->coord - node1->coord).lpNorm<1>();
+        h = (node2->index - node1->index).lpNorm<1>();
     } else if (heuristic_function_type == HeuristicFunctionType::Euclidean) {
-        h = (node2->coord - node1->coord).norm();
+        h = (node2->index - node1->index).norm();
     } else if (heuristic_function_type == HeuristicFunctionType::Diagonal) {
-        double dx = std::abs(node1->coord.x() - node2->coord.x());
-        double dy = std::abs(node1->coord.y() - node2->coord.y());
-        double dz = std::abs(node1->coord.z() - node2->coord.z());
+        double dx = std::abs(node1->index.x() - node2->index.x());
+        double dy = std::abs(node1->index.y() - node2->index.y());
+        double dz = std::abs(node1->index.z() - node2->index.z());
         double min_xyz = std::min({dx, dy, dz});
         double max_xyz = std::max({dx, dy, dz});
         double mid_xyz = dx + dy + dz - min_xyz - max_xyz;
@@ -242,8 +239,11 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
         if (currentPtr->index == goalIdx) {
             ros::Time time_2 = ros::Time::now();
             terminatePtr = currentPtr;
-            ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m",
+            ROS_INFO("\033[1;32m --> Time in A star is %f ms, path cost %f m \033[0m",
                      (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution);
+
+            ROS_INFO("\033[1;32m --> heuristic type: %d (Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3)\033[0m",
+                     (int)heuristic_function_type);
             return;
         }
 
@@ -260,16 +260,15 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
                 neighborPtr->fScore = getHeu(neighborPtr, endPtr) + neighborPtr->gScore;
                 neighborPtr->cameFrom = currentPtr;
                 openSet.insert(std::make_pair(neighborPtr->fScore, neighborPtr));
-
-                GridNodeMap[neighborPtr->index.x()][neighborPtr->index.y()][neighborPtr->index.z()]
-                    = neighborPtr;
-
                 neighborPtr->id = 1;
+
                 continue;
-            } else if (neighborPtr->id == 1) { //this node is in open set and need to judge if it needs to update, the "0" should be deleted when you are coding
+            } else if (neighborPtr->id == 1) { //this node is in open set and need to judge if it needs to update,
                 //Step 7
-                if (neighborPtr->gScore > currentPtr->gScore + edgeCostSets.at(i)){
+                if (neighborPtr->gScore > currentPtr->gScore + edgeCostSets.at(i)) {
                     neighborPtr->gScore = currentPtr->gScore + edgeCostSets.at(i);
+                    neighborPtr->fScore = neighborPtr->gScore + getHeu(neighborPtr, endPtr);
+                    neighborPtr->cameFrom = currentPtr;
                 }
 
                 continue;
@@ -281,7 +280,7 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
     //if search fails
     ros::Time time_2 = ros::Time::now();
     if ((time_2 - time_1).toSec() > 0.1)
-        ROS_WARN("Time consume in Astar path finding is %f", (time_2 - time_1).toSec());
+        ROS_INFO("\033[1;32m --> Time consume in A star path finding is %f \033[0m", (time_2 - time_1).toSec());
 }
 
 
@@ -291,15 +290,34 @@ vector<Vector3d> AstarPathFinder::getPath() {
 
     //Step 8
     GridNodePtr grid_node_ptr = terminatePtr;
-    while (!grid_node_ptr){
+    while (grid_node_ptr != NULL) {
         gridPath.emplace_back(grid_node_ptr);
         grid_node_ptr = grid_node_ptr->cameFrom;
     }
 
-    for (auto ptr: gridPath)
+    for (auto ptr: gridPath){
         path.push_back(ptr->coord);
+    }
 
     reverse(path.begin(), path.end());
 
     return path;
+}
+
+void AstarPathFinder::SetHeuristic(const ros::NodeHandle &nh) {
+    std::string heu_type;
+    nh.getParam("heuristic_type", heu_type);
+
+//    Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3
+    if (heu_type == "Manhattan"){
+        heuristic_function_type = HeuristicFunctionType::Manhattan;
+    } else if (heu_type == "Euclidean"){
+        heuristic_function_type = HeuristicFunctionType::Euclidean;
+    } else if (heu_type == "Diagonal"){
+        heuristic_function_type = HeuristicFunctionType::Diagonal;
+    } else if (heu_type == "Dijkstra"){
+        heuristic_function_type = HeuristicFunctionType::Dijkstra;
+    } else {
+        heuristic_function_type = HeuristicFunctionType::Manhattan;
+    }
 }
