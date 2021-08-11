@@ -4,11 +4,13 @@ constexpr int JPS3DNeib::nsz[4][2];
 
 JPS3DNeib::JPS3DNeib() {
     int id = 0;
+    //路径的运动方向一共有3x3x3=27种
     for (int dz = -1; dz <= 1; ++dz) {
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dx = -1; dx <= 1; ++dx) {
                 int norm1 = abs(dx) + abs(dy) + abs(dz);
 
+                //每一种运动方向之下，都会有不同的自然节点需要访问
                 for (int dev = 0; dev < nsz[norm1][0]; ++dev)
                     Neib(dx, dy, dz, norm1, dev, ns[id][0][dev], ns[id][1][dev], ns[id][2][dev]);
 
@@ -24,9 +26,9 @@ JPS3DNeib::JPS3DNeib() {
     }
 }
 
-
 /*!
- * 根据当前点方向的一范数来确定需要添加哪些邻居
+ * 根据到当前点的运动方向的一范数来确定需要添加哪些邻居
+ * 可以对比二维情况进行理解
  * @param dx
  * @param dy
  * @param dz
