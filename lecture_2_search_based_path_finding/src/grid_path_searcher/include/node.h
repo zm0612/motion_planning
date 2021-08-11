@@ -15,7 +15,7 @@ struct GridNode
 {     
     int id;        // 1--> open set, -1 --> closed set
     Eigen::Vector3d coord; //坐标
-    Eigen::Vector3i dir;   // direction of expanding, only for JPS
+    Eigen::Vector3i dir;   // direction of expanding, only for JPS default: [0,0,0]
     Eigen::Vector3i index;
 	
     double gScore, fScore; //g(n), f(n)

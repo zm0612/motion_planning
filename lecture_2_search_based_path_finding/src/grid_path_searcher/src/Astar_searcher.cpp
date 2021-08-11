@@ -97,9 +97,10 @@ Vector3d AstarPathFinder::gridIndex2coord(const Vector3i &index) {
 Vector3i AstarPathFinder::coord2gridIndex(const Vector3d &pt) {
     Vector3i idx;
     //max min是为了防止栅格点处在地图范围之外
+    //整个地图的坐标原点在中心的地面处，但是栅格的原点在坐标原点的左下部分
     idx << min(max(int((pt(0) - gl_xl) * inv_resolution), 0), GLX_SIZE - 1),
-            min(max(int((pt(1) - gl_yl) * inv_resolution), 0), GLY_SIZE - 1),
-            min(max(int((pt(2) - gl_zl) * inv_resolution), 0), GLZ_SIZE - 1);
+           min(max(int((pt(1) - gl_yl) * inv_resolution), 0), GLY_SIZE - 1),
+           min(max(int((pt(2) - gl_zl) * inv_resolution), 0), GLZ_SIZE - 1);
 
     return idx;
 }
@@ -145,12 +146,12 @@ inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr, vector<GridNod
                     idx.z() < 0 || idx.z() >= GLZ_SIZE)
                     continue;
 
-                if (isOccupied(idx)){
+                if (isOccupied(idx)) {
                     continue;
                 }
 
                 GridNodePtr temp_grid_node = GridNodeMap[idx.x()][idx.y()][idx.z()];
-                if (temp_grid_node->id == -1){
+                if (temp_grid_node->id == -1) {
                     continue;
                 }
 
@@ -242,7 +243,7 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
                      (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution);
 
             ROS_INFO("\033[1;32m --> heuristic type: %d (Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3)\033[0m",
-                     (int)heuristic_function_type);
+                     (int) heuristic_function_type);
             return;
         }
 
@@ -294,7 +295,7 @@ vector<Vector3d> AstarPathFinder::getPath() {
         grid_node_ptr = grid_node_ptr->cameFrom;
     }
 
-    for (auto ptr: gridPath){
+    for (auto ptr: gridPath) {
         path.push_back(ptr->coord);
     }
 
@@ -309,13 +310,13 @@ void AstarPathFinder::SetHeuristic(const ros::NodeHandle &nh) {
     nh.getParam("use_tie_breaker", use_tie_breaker);
 
 //    Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3
-    if (heu_type == "Manhattan"){
+    if (heu_type == "Manhattan") {
         heuristic_function_type = HeuristicFunctionType::Manhattan;
-    } else if (heu_type == "Euclidean"){
+    } else if (heu_type == "Euclidean") {
         heuristic_function_type = HeuristicFunctionType::Euclidean;
-    } else if (heu_type == "Diagonal"){
+    } else if (heu_type == "Diagonal") {
         heuristic_function_type = HeuristicFunctionType::Diagonal;
-    } else if (heu_type == "Dijkstra"){
+    } else if (heu_type == "Dijkstra") {
         heuristic_function_type = HeuristicFunctionType::Dijkstra;
     } else {
         heuristic_function_type = HeuristicFunctionType::Manhattan;
