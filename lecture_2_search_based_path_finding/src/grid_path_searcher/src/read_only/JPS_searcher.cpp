@@ -204,97 +204,63 @@ void JPSPathFinder::JPSGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end
     startPtr->id = 1;
     startPtr->coord = start_pt;
     openSet.insert(make_pair(startPtr->fScore, startPtr));
-    /*
-    *
-    STEP 2 :  some else preparatory works which should be done before while loop
-    please write your code below
-    *
-    *
-    */
+
     double tentative_gScore;
     vector<GridNodePtr> neighborPtrSets;
     vector<double> edgeCostSets;
 
     // this is the main loop
     while (!openSet.empty()) {
-        /*
-        *
-        *
-        step 3: Remove the node with lowest cost function from open set to closed set
-        please write your code below
-        
-        IMPORTANT NOTE!!!
-        This part you should use the C++ STL: multimap, more details can be find in Homework description
-        *
-        *
-        */
         currentPtr = openSet.begin()->second;
-        currentPtr->id = 1;
+        currentPtr->id = -1;
         openSet.erase(openSet.begin());
 
         // if the current node is the goal 
         if (currentPtr->index == goalIdx) {
             ros::Time time_2 = ros::Time::now();
             terminatePtr = currentPtr;
-            ROS_WARN("[JPS]{sucess} Time in JPS is %f ms, path cost if %f m", (time_2 - time_1).toSec() * 1000.0,
-                     currentPtr->gScore * resolution);
+            ROS_INFO("\033[1;32m --> Time in JPS is %f ms, path cost %f m \033[0m",
+                     (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution);
             return;
         }
         //get the succetion
         JPSGetSucc(currentPtr, neighborPtrSets, edgeCostSets); //we have done it for you
 
-        /*
-        *
-        *
-        STEP 4:  For all unexpanded neigbors "m" of node "n", please finish this for loop
-        please write your code below
-        *        
-        */
         for (int i = 0; i < (int) neighborPtrSets.size(); i++) {
-            /*
-            *
-            *
-            Judge if the neigbors have been expanded
-            please write your code below
-            
-            IMPORTANT NOTE!!!
-            neighborPtrSets[i]->id = -1 : unexpanded
-            neighborPtrSets[i]->id = 1 : expanded, equal to this node is in close set
-            *        
-            */
+            neighborPtr = neighborPtrSets.at(i);
             if (neighborPtr->id == 0) { //discover a new node
-                /*
-                *
-                *
-                STEP 6:  As for a new node, do what you need do ,and then put neighbor in open set and record it
-                please write your code below
-                *        
-                */
                 neighborPtr->gScore = currentPtr->gScore + edgeCostSets.at(i);
-                neighborPtr->fScore = getHeu(neighborPtr, endPtr);
+                neighborPtr->fScore = getHeu(neighborPtr, endPtr) + neighborPtr->gScore;
                 neighborPtr->cameFrom = currentPtr;
+
+                for (int iter = 0; iter < 3; iter++) {
+                    neighborPtr->dir(iter) = neighborPtr->index(iter) - currentPtr->index(iter);
+                    if (neighborPtr->dir(iter) != 0)
+                        neighborPtr->dir(iter) /= abs(neighborPtr->dir(iter));
+                }
+
                 openSet.insert(std::make_pair(neighborPtr->fScore, neighborPtr));
                 neighborPtr->id = 1;
+
                 continue;
             } else if (neighborPtr->id == 1) { //in open set and need update
-                /*
-                *
-                *
-                STEP 7:  As for a node in open set, update it , maintain the openset ,and then put neighbor in open set and record it
-                please write your code below
-                *        
-                */
-                if (neighborPtr->gScore > currentPtr->gScore + edgeCostSets.at(i)){
+                if (neighborPtr->gScore > currentPtr->gScore + edgeCostSets.at(i)) {
                     neighborPtr->gScore = currentPtr->gScore + edgeCostSets.at(i);
                     neighborPtr->fScore = neighborPtr->gScore + getHeu(neighborPtr, endPtr);
                     neighborPtr->cameFrom = currentPtr;
 
-                    // if change its parents, update the expanding direction
-                    //THIS PART IS ABOUT JPS, you can ignore it when you do your Astar work
-                    for (int i = 0; i < 3; i++) {
-                        neighborPtr->dir(i) = neighborPtr->index(i) - currentPtr->index(i);
-                        if (neighborPtr->dir(i) != 0)
-                            neighborPtr->dir(i) /= abs(neighborPtr->dir(i));
+                    for (int iter = 0; iter < 3; iter++) {
+                        neighborPtr->dir(iter) = neighborPtr->index(iter) - currentPtr->index(iter);
+                        if (neighborPtr->dir(iter) != 0)
+                            neighborPtr->dir(iter) /= abs(neighborPtr->dir(iter));
+                    }
+
+                    std::multimap<double, GridNodePtr>::iterator map_iter = openSet.begin();
+                    for (; map_iter != openSet.end(); map_iter++) {
+                        if (map_iter->second->index == neighborPtr->index){
+                            openSet.erase(map_iter);
+                            openSet.insert(std::make_pair(neighborPtr->fScore, neighborPtr));
+                        }
                     }
                 }
                 continue;
@@ -306,5 +272,5 @@ void JPSPathFinder::JPSGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end
     //if search fails
     ros::Time time_2 = ros::Time::now();
     if ((time_2 - time_1).toSec() > 0.1)
-        ROS_WARN("Time consume in JPS path finding is %f", (time_2 - time_1).toSec());
+        ROS_INFO("\033[1;32m --> Time consume in JPS path finding is %f ms\033[0m", (time_2 - time_1).toSec() * 1000);
 }

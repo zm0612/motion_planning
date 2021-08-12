@@ -9,14 +9,13 @@
 #include "node.h"
 
 class AstarPathFinder {
-private:
+protected:
     enum class HeuristicFunctionType {
-        Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3
+        Manhattan = 0, Euclidean = 1, Diagonal = 2, Dijkstra = 3
     };
     HeuristicFunctionType heuristic_function_type = HeuristicFunctionType::Euclidean;
     bool use_tie_breaker = false;
 
-protected:
     uint8_t *data;
     GridNodePtr ***GridNodeMap;
     Eigen::Vector3i goalIdx;
@@ -65,7 +64,8 @@ public:
 
     ~AstarPathFinder() {};
 
-    void SetHeuristic(const ros::NodeHandle& nh);
+    void SetHeuristic(const ros::NodeHandle &nh);
+
     /*!
      * A* 搜索算法
      * @param start_pt

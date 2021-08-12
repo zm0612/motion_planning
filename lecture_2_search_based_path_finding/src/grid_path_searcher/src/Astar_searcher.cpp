@@ -157,7 +157,7 @@ inline void AstarPathFinder::AstarGetSucc(GridNodePtr currentPtr, vector<GridNod
 
                 neighborPtrSets.emplace_back(temp_grid_node);
 
-                double edge_cost = (temp_grid_node->index - currentPtr->index).norm();
+                double edge_cost = (temp_grid_node->index.cast<double>() - currentPtr->index.cast<double>()).norm();
                 edgeCostSets.emplace_back(edge_cost);
             }
         }
@@ -241,6 +241,7 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
             terminatePtr = currentPtr;
             ROS_INFO("\033[1;32m --> Time in A star is %f ms, path cost %f m \033[0m",
                      (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution);
+            std::cout << "g score: " << currentPtr->gScore << std::endl;
 
             ROS_INFO("\033[1;32m --> heuristic type: %d (Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3)\033[0m",
                      (int) heuristic_function_type);
@@ -269,6 +270,14 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
                     neighborPtr->gScore = currentPtr->gScore + edgeCostSets.at(i);
                     neighborPtr->fScore = neighborPtr->gScore + getHeu(neighborPtr, endPtr);
                     neighborPtr->cameFrom = currentPtr;
+
+                    std::multimap<double, GridNodePtr>::iterator map_iter = openSet.begin();
+                    for (; map_iter != openSet.end(); map_iter++) {
+                        if (map_iter->second->index == neighborPtr->index){
+                            openSet.erase(map_iter);
+                            openSet.insert(std::make_pair(neighborPtr->fScore, neighborPtr));
+                        }
+                    }
                 }
 
                 continue;
