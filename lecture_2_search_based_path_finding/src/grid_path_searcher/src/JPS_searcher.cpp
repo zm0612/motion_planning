@@ -205,7 +205,6 @@ void JPSPathFinder::JPSGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end
     startPtr->coord = start_pt;
     openSet.insert(make_pair(startPtr->fScore, startPtr));
 
-    double tentative_gScore;
     vector<GridNodePtr> neighborPtrSets;
     vector<double> edgeCostSets;
 
@@ -233,12 +232,6 @@ void JPSPathFinder::JPSGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end
                 neighborPtr->fScore = getHeu(neighborPtr, endPtr) + neighborPtr->gScore;
                 neighborPtr->cameFrom = currentPtr;
 
-                for (int iter = 0; iter < 3; iter++) {
-                    neighborPtr->dir(iter) = neighborPtr->index(iter) - currentPtr->index(iter);
-                    if (neighborPtr->dir(iter) != 0)
-                        neighborPtr->dir(iter) /= abs(neighborPtr->dir(iter));
-                }
-
                 openSet.insert(std::make_pair(neighborPtr->fScore, neighborPtr));
                 neighborPtr->id = 1;
 
@@ -257,9 +250,10 @@ void JPSPathFinder::JPSGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end
 
                     std::multimap<double, GridNodePtr>::iterator map_iter = openSet.begin();
                     for (; map_iter != openSet.end(); map_iter++) {
-                        if (map_iter->second->index == neighborPtr->index){
+                        if (map_iter->second->index == neighborPtr->index) {
                             openSet.erase(map_iter);
                             openSet.insert(std::make_pair(neighborPtr->fScore, neighborPtr));
+                            break;
                         }
                     }
                 }
@@ -268,9 +262,13 @@ void JPSPathFinder::JPSGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end
                 continue;
             }
         }
+
+        //if search fails
+        ros::Time time_2 = ros::Time::now();
+        if ((time_2 - time_1).toSec() > 2.0) {
+            ROS_ERROR(" --> Time consume in JPS path finding is %f ms",
+                      (time_2 - time_1).toSec() * 1000);
+            break;
+        }
     }
-    //if search fails
-    ros::Time time_2 = ros::Time::now();
-    if ((time_2 - time_1).toSec() > 0.1)
-        ROS_INFO("\033[1;32m --> Time consume in JPS path finding is %f ms\033[0m", (time_2 - time_1).toSec() * 1000);
 }

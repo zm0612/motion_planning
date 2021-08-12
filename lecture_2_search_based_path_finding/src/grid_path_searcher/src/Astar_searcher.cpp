@@ -171,9 +171,9 @@ double AstarPathFinder::getHeu(GridNodePtr node1, GridNodePtr node2) {
     double h = 0.0;
 
     if (heuristic_function_type == HeuristicFunctionType::Manhattan) {
-        h = (node2->index - node1->index).lpNorm<1>();
+        h = (node2->index.cast<double>() - node1->index.cast<double>()).lpNorm<1>();
     } else if (heuristic_function_type == HeuristicFunctionType::Euclidean) {
-        h = (node2->index - node1->index).norm();
+        h = (node2->index.cast<double>() - node1->index.cast<double>()).norm();
     } else if (heuristic_function_type == HeuristicFunctionType::Diagonal) {
         double dx = std::abs(node1->index.x() - node2->index.x());
         double dy = std::abs(node1->index.y() - node2->index.y());
@@ -241,7 +241,6 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
             terminatePtr = currentPtr;
             ROS_INFO("\033[1;32m --> Time in A star is %f ms, path cost %f m \033[0m",
                      (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution);
-            std::cout << "g score: " << currentPtr->gScore << std::endl;
 
             ROS_INFO("\033[1;32m --> heuristic type: %d (Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3)\033[0m",
                      (int) heuristic_function_type);
@@ -276,6 +275,7 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
                         if (map_iter->second->index == neighborPtr->index){
                             openSet.erase(map_iter);
                             openSet.insert(std::make_pair(neighborPtr->fScore, neighborPtr));
+                            break;
                         }
                     }
                 }
@@ -285,11 +285,13 @@ void AstarPathFinder::AstarGraphSearch(Vector3d start_pt, Vector3d end_pt) {
                 continue;
             }
         }
+        //if search fails
+        ros::Time time_2 = ros::Time::now();
+        if ((time_2 - time_1).toSec() > 2.0) {
+            ROS_INFO(" --> Time consume in A star path finding is %f ms", (time_2 - time_1).toSec());
+            break;
+        }
     }
-    //if search fails
-    ros::Time time_2 = ros::Time::now();
-    if ((time_2 - time_1).toSec() > 0.1)
-        ROS_INFO("\033[1;32m --> Time consume in A star path finding is %f \033[0m", (time_2 - time_1).toSec());
 }
 
 

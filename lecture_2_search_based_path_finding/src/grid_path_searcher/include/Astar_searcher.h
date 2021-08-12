@@ -13,7 +13,7 @@ protected:
     enum class HeuristicFunctionType {
         Manhattan = 0, Euclidean = 1, Diagonal = 2, Dijkstra = 3
     };
-    HeuristicFunctionType heuristic_function_type = HeuristicFunctionType::Euclidean;
+    HeuristicFunctionType heuristic_function_type = HeuristicFunctionType::Diagonal;
     bool use_tie_breaker = false;
 
     uint8_t *data;
