@@ -1,36 +1,41 @@
-## 代码运行方法
+## 1. 代码运行方法
 
 编译
 
 ```shell
-catkin_make -j12
+cd {workspace}
+catkin_make  -j12
 ```
 
 运行
 
 ```shell	
-# 务必按照顺序执行
-#打开一个终端
-cd {workspace}
-source devel/setup.bash
-roscore
-
-#打开一个新终端
-cd {workspace}
-source devel/setup.bash
-rviz #加载grid_path_searcher/launch/rviz_config/demo.rviz
-
-#打开一个新终端
 cd {workspace}
 source devel/setup.bash
 roslaunch grid_path_searcher demo.launch
 
 # 更换启发函数 Manhattan, Euclidean, Diagonal, Dijkstra
-rosparam set /demo_node/heuristic_type Manhattan
+rosparam set /demo_node/heuristic_type Manhattan #通过参数服务器，避免重启程序地图发生变化
 
 # 打开或者关闭Tie Breaker   true: 打开  false: 关闭
 rosparam set /demo_node/use_tie_breaker true
 ```
+
+> 默认启动的情况下，A star和JPS均使用启发函数`Diagonal`和使用`Tie breaker`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## A* 算法路径搜索实验结果
 
@@ -38,7 +43,7 @@ rosparam set /demo_node/use_tie_breaker true
 
 __Map__
 
-![A_star_map](doc/A_star_map.png)
+<img src="doc/A_star_map.png" alt="A_star_map" style="zoom:50%;" />
 
 > 坐标系原点为起点，红旗处为终点
 
