@@ -197,6 +197,7 @@ int main(int argc, char **argv) {
     bool status = ros::ok();
     while (status) {
         _astar_path_finder->SetHeuristic(nh);
+        _jps_path_finder->SetHeuristic(nh);
         ros::spinOnce();
         status = ros::ok();
         rate.sleep();

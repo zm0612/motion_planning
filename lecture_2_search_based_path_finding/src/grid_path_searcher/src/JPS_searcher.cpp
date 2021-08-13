@@ -220,6 +220,9 @@ void JPSPathFinder::JPSGraphSearch(Eigen::Vector3d start_pt, Eigen::Vector3d end
             terminatePtr = currentPtr;
             ROS_INFO("\033[1;32m --> Time in JPS is %f ms, path cost %f m \033[0m",
                      (time_2 - time_1).toSec() * 1000.0, currentPtr->gScore * resolution);
+
+            ROS_INFO("\033[1;32m --> heuristic type: %d (Manhattan = 0, Euclidean=1, Diagonal=2, Dijkstra=3)\033[0m",
+                     (int) heuristic_function_type);
             return;
         }
         //get the succetion
