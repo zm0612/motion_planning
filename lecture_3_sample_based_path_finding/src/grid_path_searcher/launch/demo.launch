@@ -8,6 +8,8 @@
 <arg name="start_y" default=" 0.0"/>
 <arg name="start_z" default=" 1.0"/>
 
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find grid_path_searcher)/launch/rviz_config/demo.rviz"/>
+
   <node pkg="grid_path_searcher" type="demo_node" name="demo_node" output="screen" required = "true">
       <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
       <remap from="~map"             to="/random_complex/global_map"/> 
