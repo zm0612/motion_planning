@@ -1,3 +1,6 @@
+//
+// Created by meng on 2021/8/18.
+//
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -93,11 +96,15 @@ void RandomMapGenerate() {
             gama = M_PI / 2.0;
         }
 
-      Rot << cos(alpha) * cos(gama)  - cos(beta) * sin(alpha) * sin(gama), - cos(beta) * cos(gama) * sin(alpha) - cos(alpha) * sin(gama),   sin(alpha) * sin(beta),
-             cos(gama)  * sin(alpha) + cos(alpha) * cos(beta) * sin(gama),   cos(alpha) * cos(beta) * cos(gama) - sin(alpha) * sin(gama), - cos(alpha) * sin(beta),
-             sin(beta)  * sin(gama),                                         cos(gama) * sin(beta),                                         cos(beta);
+        Rot << cos(alpha) * cos(gama) - cos(beta) * sin(alpha) * sin(gama),
+                -cos(beta) * cos(gama) * sin(alpha) - cos(alpha) * sin(gama),
+                sin(alpha) * sin(beta),
+                cos(gama) * sin(alpha) + cos(alpha) * cos(beta) * sin(gama),
+                cos(alpha) * cos(beta) * cos(gama) - sin(alpha) * sin(gama),
+                -cos(alpha) * sin(beta),
+                sin(beta) * sin(gama), cos(gama) * sin(beta), cos(beta);
 
-        for (const auto &pt: circle_set) {
+        for (auto pt: circle_set) {
             pt3_rot = Rot * pt;
             pt_random.x = pt3_rot(0) + x0 + 0.001;
             pt_random.y = pt3_rot(1) + y0 + 0.001;
