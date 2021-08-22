@@ -52,3 +52,12 @@ add_executable ( random_complex
 target_link_libraries( random_complex
     ${catkin_LIBRARIES}
     ${PCL_LIBRARIES} )  
+
+add_executable(compare_demo_node
+    src/compare_demo_node.cpp
+    src/RRT.cpp
+)
+target_link_libraries(compare_demo_node
+    ${catkin_LIBRARIES}
+    ${PCL_LIBRARIES}
+)

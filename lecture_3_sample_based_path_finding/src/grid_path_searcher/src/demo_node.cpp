@@ -194,7 +194,7 @@ void pathFinding(const Vector3d start_pt, const Vector3d target_pt) {
     // Set the optimization objective
     pdef->setOptimizationObjective(getPathLengthObjective(si));
 
-    // Construct our optimizing planner using the RRTstar algorithm.
+    // Construct our optimizing planner using the RRT algorithm.
     ob::PlannerPtr optimizingPlanner = std::make_shared<og::RRTstar>(si);
     // Set the problem instance for our planner to solve
     optimizingPlanner->setProblemDefinition(pdef);
