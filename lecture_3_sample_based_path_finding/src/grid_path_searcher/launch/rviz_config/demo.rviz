@@ -6,14 +6,14 @@ Panels:
       Expanded:
         - /AllMap1/Autocompute Value Bounds1
         - /Marker1
-      Splitter Ratio: 0.609022558
-    Tree Height: 585
+      Splitter Ratio: 0.6090225577354431
+    Tree Height: 486
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
     Expanded: ~
     Name: Tool Properties
-    Splitter Ratio: 0.588679016
+    Splitter Ratio: 0.5886790156364441
   - Class: rviz/Views
     Expanded:
       - /Current View1
@@ -24,18 +24,20 @@ Panels:
     Name: Time
     SyncMode: 0
     SyncSource: AllMap
+Preferences:
+  PromptSaveOnExit: true
 Toolbars:
   toolButtonStyle: 2
 Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
-      Cell Size: 0.200000003
+      Cell Size: 0.20000000298023224
       Class: rviz/Grid
       Color: 0; 0; 0
       Enabled: true
       Line Style:
-        Line Width: 0.0299999993
+        Line Width: 0.029999999329447746
         Value: Lines
       Name: Grid
       Normal Cell Count: 0
@@ -51,14 +53,14 @@ Visualization Manager:
       Enabled: true
       Length: 2
       Name: Axes
-      Radius: 0.0500000007
+      Radius: 0.05000000074505806
       Reference Frame: <Fixed Frame>
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 1.89999998
-        Min Value: 0.100000001
+        Max Value: 1.899999976158142
+        Min Value: 0.10000000149011612
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -77,7 +79,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.200000003
+      Size (m): 0.20000000298023224
       Style: Boxes
       Topic: /demo_node/grid_map_vis
       Unreliable: false
@@ -110,98 +112,98 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 16.1667824
+      Distance: 22.713165283203125
       Enable Stereo Rendering:
-        Stereo Eye Separation: 0.0599999987
+        Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.260204941
-        Y: -0.233109355
-        Z: -2.32784176
+        X: -0.22640910744667053
+        Y: -0.9830646514892578
+        Z: -1.7069860696792603
       Focal Shape Fixed Size: true
-      Focal Shape Size: 0.0500000007
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
-      Near Clip Distance: 0.00999999978
-      Pitch: 1.01479673
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.8797968626022339
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.460830152
+      Yaw: 1.6158297061920166
     Saved:
       - Class: rviz/Orbit
-        Distance: 79.2448425
+        Distance: 79.24484252929688
         Enable Stereo Rendering:
-          Stereo Eye Separation: 0.0599999987
+          Stereo Eye Separation: 0.05999999865889549
           Stereo Focal Distance: 1
           Swap Stereo Eyes: false
           Value: false
         Focal Point:
-          X: -13.6964359
-          Y: -5.96537924
-          Z: -19.0381603
+          X: -13.696435928344727
+          Y: -5.965379238128662
+          Z: -19.03816032409668
         Focal Shape Fixed Size: true
-        Focal Shape Size: 0.0500000007
+        Focal Shape Size: 0.05000000074505806
         Invert Z Axis: false
         Name: Orbit
-        Near Clip Distance: 0.00999999978
-        Pitch: 1.1997968
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 1.1997967958450317
         Target Frame: <Fixed Frame>
         Value: Orbit (rviz)
-        Yaw: 4.55750179
-      - Angle: -0.00499992538
+        Yaw: 4.557501792907715
+      - Angle: -0.004999925382435322
         Class: rviz/TopDownOrtho
         Enable Stereo Rendering:
-          Stereo Eye Separation: 0.0599999987
+          Stereo Eye Separation: 0.05999999865889549
           Stereo Focal Distance: 1
           Swap Stereo Eyes: false
           Value: false
         Invert Z Axis: false
         Name: TopDownOrtho
-        Near Clip Distance: 0.00999999978
-        Scale: 17.4224415
+        Near Clip Distance: 0.009999999776482582
+        Scale: 17.422441482543945
         Target Frame: <Fixed Frame>
         Value: TopDownOrtho (rviz)
-        X: -8.52147961
-        Y: -7.69360256
-      - Angle: 0.0150001263
+        X: -8.521479606628418
+        Y: -7.693602561950684
+      - Angle: 0.01500012632459402
         Class: rviz/TopDownOrtho
         Enable Stereo Rendering:
-          Stereo Eye Separation: 0.0599999987
+          Stereo Eye Separation: 0.05999999865889549
           Stereo Focal Distance: 1
           Swap Stereo Eyes: false
           Value: false
         Invert Z Axis: false
         Name: TopDownOrtho
-        Near Clip Distance: 0.00999999978
-        Scale: 134.654221
+        Near Clip Distance: 0.009999999776482582
+        Scale: 134.6542205810547
         Target Frame: <Fixed Frame>
         Value: TopDownOrtho (rviz)
-        X: -15.3867512
-        Y: -4.14116335
-      - Angle: -0.0249942318
+        X: -15.386751174926758
+        Y: -4.141163349151611
+      - Angle: -0.02499423176050186
         Class: rviz/TopDownOrtho
         Enable Stereo Rendering:
-          Stereo Eye Separation: 0.0599999987
+          Stereo Eye Separation: 0.05999999865889549
           Stereo Focal Distance: 1
           Swap Stereo Eyes: false
           Value: false
         Invert Z Axis: false
         Name: TopDownOrtho
-        Near Clip Distance: 0.00999999978
-        Scale: 10.9894609
+        Near Clip Distance: 0.009999999776482582
+        Scale: 10.989460945129395
         Target Frame: <Fixed Frame>
         Value: TopDownOrtho (rviz)
-        X: -15.1368361
-        Y: -11.9202261
+        X: -15.136836051940918
+        Y: -11.920226097106934
 Window Geometry:
   Displays:
-    collapsed: false
-  Height: 1056
-  Hide Left Dock: false
+    collapsed: true
+  Height: 1195
+  Hide Left Dock: true
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001a2000003dafc020000000bfb000000100044006900730070006c00610079007301000000280000028a000000d700fffffffb0000000a0056006900650077007301000002b80000014a000000ad00fffffffb0000001200530065006c0065006300740069006f006e00000000000000009b0000006100fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000000e3000001c60000006100fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065020000037e000000e30000016a00000089fb0000000a0049006d0061006700650200000593000001f50000016a000000ed000000010000010f000002c4fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b20000000000000000000000020000073f000000ddfc0100000002fb0000000c00430061006d006500720061020000012e00000138000002d9000001a9fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000005730000003efc0100000002fb0000000800540069006d00650000000000000005730000030000fffffffb0000000800540069006d0065010000000000000450000000000000000000000597000003da00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001e000000388fc020000000bfb000000100044006900730070006c006100790073000000006c000002500000017e00fffffffb0000000a0056006900650077007300000002c80000012c0000012c00fffffffb0000001200530065006c0065006300740069006f006e00000000000000009b000000ae00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000000e3000001c6000000ae00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065020000037e000000e30000016a00000089fb0000000a0049006d0061006700650200000593000001f50000016a000000ed000000010000010f000002c4fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b20000000000000000000000020000073f000000ddfc0100000002fb0000000c00430061006d006500720061020000012e00000138000002d9000001a9fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000005730000003efc0100000002fb0000000800540069006d00650000000000000005730000085900fffffffb0000000800540069006d00650100000000000004500000000000000000000005490000041300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -209,7 +211,7 @@ Window Geometry:
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: false
-  Width: 1855
-  X: 65
-  Y: 24
+    collapsed: true
+  Width: 1353
+  X: 164
+  Y: 55

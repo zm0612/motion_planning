@@ -129,6 +129,7 @@ bool RRT::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end
 
     start_node_ = new RRTNode;
     start_node_->coordinate_ = start_pt;
+
     start_node_->index_ = start_index;
     start_node_->parent_ = nullptr;
     nodes_ptr_.emplace_back(start_node_);
@@ -137,7 +138,9 @@ bool RRT::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end
     kdtree_flann_.setInputCloud(point_cloud_node.makeShared());
 
     while (true) {
+//    for (int i = 0; i < 10; ++i) {
         std::cout << "searching ..." << std::endl;
+        std::cout << "end index: " << end_node_->index_.transpose() << std::endl;
         std::cout << "nodes size: " << nodes_ptr_.size() << std::endl;
         Eigen::Vector3i rand_index = Sample();
         std::cout << "rand index: " << rand_index.transpose() << std::endl;
@@ -145,24 +148,25 @@ bool RRT::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end
 
         std::cout << "near index: " << near_node_ptr->index_.transpose() << std::endl;
         double delta_dist = (rand_index - near_node_ptr->index_).cast<double>().norm();
-        if (delta_dist < 0.5) {
-            continue;
-        }
+//        if (delta_dist * grid_resolution_ < 0.5) {
+//            continue;
+//        }
 
-        Eigen::Vector3d new_pt_coord = Steer(rand_index, near_node_ptr->index_, 0.5);
-        Eigen::Vector3i new_pt_index = Coord2GridIndex(new_pt_coord);
-        std::cout << "new index: " << new_pt_index.transpose() << std::endl << std::endl;
+        Eigen::Vector3d new_pt_index = Steer(rand_index, near_node_ptr->index_, 0.5);
+        std::cout << "new index: " << new_pt_index.transpose() << std::endl;
+        Eigen::Vector3d new_pt_coord = GridIndex2Coord(new_pt_index.cast<int>());
+        std::cout << "new pt: " << new_pt_coord.transpose() << std::endl << std::endl << std::endl;
 
-        if (!CollisionFree(near_node_ptr->index_, new_pt_index)) {
+        if (!CollisionFree(near_node_ptr->index_, new_pt_index.cast<int>())) {
             continue;
         }
 
         RRTNode *new_node_ptr = new RRTNode;
-        new_node_ptr->index_ = new_pt_index;
+        new_node_ptr->index_ = new_pt_index.cast<int>();
         new_node_ptr->coordinate_ = new_pt_coord;
         new_node_ptr->parent_ = near_node_ptr;
 
-        nodes_ptr_.emplace_back(new_node_ptr);
+        nodes_ptr_.push_back(new_node_ptr);
 
         if ((new_pt_coord - end_node_->coordinate_).norm() <= grid_resolution_) {
             end_node_->parent_ = new_node_ptr;
@@ -186,8 +190,8 @@ std::vector<Eigen::Vector3d> RRT::GetPath() {
     std::vector<Eigen::Vector3d> path;
 
     RRTNode *node_ptr = end_node_;
-    while (node_ptr != start_node_) {
-        path.emplace_back(node_ptr->index_.cast<double>());
+    while (node_ptr != nullptr) {
+        path.emplace_back(node_ptr->coordinate_);
         node_ptr = node_ptr->parent_;
     }
 

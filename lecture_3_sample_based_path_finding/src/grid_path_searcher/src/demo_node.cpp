@@ -152,6 +152,8 @@ ob::OptimizationObjectivePtr getThresholdPathLengthObj(const ob::SpaceInformatio
 }
 
 void pathFinding(const Vector3d start_pt, const Vector3d target_pt) {
+    ros::Time start_time = ros::Time::now();
+
     // Construct the robot state space in which we're planning. 
     ob::StateSpacePtr space(new ob::RealVectorStateSpace(3));
 
@@ -220,6 +222,9 @@ void pathFinding(const Vector3d start_pt, const Vector3d target_pt) {
             point << state->values[0], state->values[1], state->values[2];
             path_points.emplace_back(point);
         }
+
+        ros::Duration use_time = (ros::Time::now() - start_time);
+        ROS_INFO_STREAM("ompl RR* use_time: " << use_time.toSec());
         visRRTstarPath(path_points);
     }
 }
