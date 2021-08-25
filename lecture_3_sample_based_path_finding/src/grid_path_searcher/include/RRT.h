@@ -53,15 +53,19 @@ protected:
 
     Eigen::Vector3i Coord2GridIndex(const Eigen::Vector3d& point);
 
-    Eigen::Vector3i Sample();
+    Eigen::Vector3d CheckPointRange(const Eigen::Vector3d& point);
 
-    RRTNode* Near(const Eigen::Vector3i& index);
+    Eigen::Vector3d Sample();
 
-    Eigen::Vector3d Steer(const Eigen::Vector3i& rand_index, const Eigen::Vector3i& near_index, double step_size);
+    bool IsObstacle(const Eigen::Vector3d& point_coord);
 
-    bool CollisionFree(const Eigen::Vector3i& near_index, const Eigen::Vector3i& new_index);
+    RRTNode* Near(const Eigen::Vector3d& pt);
 
-    pcl::PointCloud<pcl::PointXYZ> GetNodesIndexPointCloud();
+    Eigen::Vector3d Steer(const Eigen::Vector3d& rand_point, const Eigen::Vector3d& near_point, double step_size);
+
+    bool CollisionFree(const Eigen::Vector3d& near_point, const Eigen::Vector3d& new_point);
+
+    pcl::PointCloud<pcl::PointXYZ> GetNodesCoordPointCloud();
 };
 
 #endif //GRID_PATH_SEARCH_RRTSTAR_H

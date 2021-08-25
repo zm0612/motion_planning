@@ -50,7 +50,11 @@ void rcvWaypointsCallback(const nav_msgs::Path &wp) {
                  wp.poses[0].pose.position.z;
 
     ROS_INFO("[node] receive the planning target");
+    ros::Time start = ros::Time::now();
     _rrt_path_finding->SearchPath(_start_pt, target_pt);
+    ros::Time end = ros::Time::now();
+    ros::Duration rrt_use_time = end - start;
+    ROS_INFO_STREAM("rrt path finding use time: " << rrt_use_time.toSec());
     auto path = _rrt_path_finding->GetPath();
     visRRTstarPath(path);
     _rrt_path_finding->Reset();

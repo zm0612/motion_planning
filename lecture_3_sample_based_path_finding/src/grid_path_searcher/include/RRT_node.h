@@ -8,8 +8,8 @@
 #include <Eigen/Dense>
 
 struct RRTNode{
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     Eigen::Vector3d coordinate_;
-    Eigen::Vector3i index_;
     RRTNode* parent_;
 };
 

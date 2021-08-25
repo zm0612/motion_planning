@@ -60,30 +60,42 @@ Eigen::Vector3i RRT::Coord2GridIndex(const Eigen::Vector3d &point) {
     return index;
 }
 
+Eigen::Vector3d RRT::CheckPointRange(const Eigen::Vector3d &point) {
+    Eigen::Vector3d corrected_point;
+    corrected_point.x() = std::min(std::max(xyz_coord_lower_.x(), point.x()), xyz_coord_upper_.x());
+    corrected_point.y() = std::min(std::max(xyz_coord_lower_.y(), point.y()), xyz_coord_upper_.y());
+    corrected_point.z() = std::min(std::max(xyz_coord_lower_.z(), point.z()), xyz_coord_upper_.z());
+
+    return corrected_point;
+}
+
 Eigen::Vector3d RRT::CoordRounding(const Eigen::Vector3d &coord) {
     return GridIndex2Coord(Coord2GridIndex(coord));
 }
 
-Eigen::Vector3i RRT::Sample() {
+Eigen::Vector3d RRT::Sample() {
     std::random_device rd;
     std::default_random_engine eng(rd());
 
-    std::uniform_int_distribution<int> rand_index_x = std::uniform_int_distribution<int>(0, grid_size_.x() - 1);
-    std::uniform_int_distribution<int> rand_index_y = std::uniform_int_distribution<int>(0, grid_size_.y() - 1);
-    std::uniform_int_distribution<int> rand_index_z = std::uniform_int_distribution<int>(0, grid_size_.z() - 1);
+    std::uniform_real_distribution<> rand_pt_x =
+            std::uniform_real_distribution<>(xyz_coord_lower_.x(), xyz_coord_upper_.x());
+    std::uniform_real_distribution<> rand_pt_y =
+            std::uniform_real_distribution<>(xyz_coord_lower_.y(), xyz_coord_upper_.y());
+    std::uniform_real_distribution<> rand_pt_z =
+            std::uniform_real_distribution<>(xyz_coord_lower_.z(), xyz_coord_upper_.z());
 
-    Eigen::Vector3i rand_index;
-    rand_index << rand_index_x(eng), rand_index_y(eng), rand_index_z(eng);
+    Eigen::Vector3d rand_pt;
+    rand_pt << rand_pt_x(eng), rand_pt_y(eng), rand_pt_z(eng);
 
-    return rand_index;
+    return rand_pt;
 }
 
-RRTNode *RRT::Near(const Eigen::Vector3i &index) {
+RRTNode *RRT::Near(const Eigen::Vector3d &pt) {
     std::vector<int> search_indices;
     std::vector<float> search_distances;
-    pcl::PointXYZ point(index.cast<float>().x(),
-                        index.cast<float>().y(),
-                        index.cast<float>().z());
+    pcl::PointXYZ point(pt.cast<float>().x(),
+                        pt.cast<float>().y(),
+                        pt.cast<float>().z());
     kdtree_flann_.nearestKSearch(point, 1, search_indices, search_distances);
 
     if (search_indices.empty()) {
@@ -93,95 +105,105 @@ RRTNode *RRT::Near(const Eigen::Vector3i &index) {
     return nodes_ptr_[search_indices[0]];
 }
 
-Eigen::Vector3d RRT::Steer(const Eigen::Vector3i &rand_index,
-                           const Eigen::Vector3i &near_index,
+Eigen::Vector3d RRT::Steer(const Eigen::Vector3d &rand_point,
+                           const Eigen::Vector3d &near_point,
                            double step_size) {
-//    Eigen::Vector3d direction = (rand_index.cast<double>() - near_index.cast<double>()).normalized();
-//    return direction * step_size + near_index.cast<double>();
-    return rand_index.cast<double>();
+    Eigen::Vector3d direction = (rand_point - near_point).normalized();
+
+    return near_point + direction * step_size;
 }
 
-pcl::PointCloud<pcl::PointXYZ> RRT::GetNodesIndexPointCloud() {
+pcl::PointCloud<pcl::PointXYZ> RRT::GetNodesCoordPointCloud() {
     pcl::PointCloud<pcl::PointXYZ> point_cloud;
 
     for (unsigned int i = 0; i < nodes_ptr_.size(); ++i) {
-        pcl::PointXYZ point(nodes_ptr_[i]->index_.cast<float>().x(),
-                            nodes_ptr_[i]->index_.cast<float>().y(),
-                            nodes_ptr_[i]->index_.cast<float>().z());
+        pcl::PointXYZ point(nodes_ptr_[i]->coordinate_.cast<float>().x(),
+                            nodes_ptr_[i]->coordinate_.cast<float>().y(),
+                            nodes_ptr_[i]->coordinate_.cast<float>().z());
         point_cloud.push_back(point);
     }
 
     return point_cloud;
 }
 
-bool RRT::CollisionFree(const Eigen::Vector3i &near_index, const Eigen::Vector3i &new_index) {
-    return true;
+bool RRT::IsObstacle(const Eigen::Vector3d &point_coord) {
+    const Eigen::Vector3i point_index = Coord2GridIndex(point_coord);
+
+    int grid_index = all_xy_grid_size_ * point_index.z() +
+            all_x_grid_size_ * point_index.y() + point_index.x();
+
+    return map_data_[grid_index];
+}
+
+bool RRT::CollisionFree(const Eigen::Vector3d &near_point, const Eigen::Vector3d &new_point) {
+    double step_size = grid_resolution_ / 5.0;
+    Eigen::Vector3d direction = (new_point-near_point).normalized();
+    Eigen::Vector3d delta = direction * step_size;
+    Eigen::Vector3d temp_point = near_point;
+    double dist_thred = (new_point - near_point).norm();
+    while (true){
+        temp_point = temp_point + delta;
+
+        if ((temp_point - near_point).norm() >= dist_thred){
+            return true;
+        }
+
+        if (IsObstacle(temp_point)){
+            return false;
+        }
+    }
 }
 
 bool RRT::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end_pt) {
-    const Eigen::Vector3i start_index = Coord2GridIndex(start_pt);
-    const Eigen::Vector3i end_index = Coord2GridIndex(end_pt);
+    const Eigen::Vector3d start = CheckPointRange(start_pt);
+    const Eigen::Vector3d end = CheckPointRange(end_pt);
 
     end_node_ = new RRTNode;
-    end_node_->coordinate_ = end_pt;
-    end_node_->index_ = end_index;
+    end_node_->coordinate_ = end;
     end_node_->parent_ = nullptr;
 
     start_node_ = new RRTNode;
-    start_node_->coordinate_ = start_pt;
-
-    start_node_->index_ = start_index;
+    start_node_->coordinate_ = start;
     start_node_->parent_ = nullptr;
     nodes_ptr_.emplace_back(start_node_);
 
-    pcl::PointCloud<pcl::PointXYZ> point_cloud_node = GetNodesIndexPointCloud();
+    pcl::PointCloud<pcl::PointXYZ> point_cloud_node = GetNodesCoordPointCloud();
     kdtree_flann_.setInputCloud(point_cloud_node.makeShared());
 
     while (true) {
-//    for (int i = 0; i < 10; ++i) {
-        std::cout << "searching ..." << std::endl;
-        std::cout << "end index: " << end_node_->index_.transpose() << std::endl;
-        std::cout << "nodes size: " << nodes_ptr_.size() << std::endl;
-        Eigen::Vector3i rand_index = Sample();
-        std::cout << "rand index: " << rand_index.transpose() << std::endl;
-        RRTNode *near_node_ptr = Near(rand_index);
+        Eigen::Vector3d rand_point = Sample();
+        RRTNode *near_node_ptr = Near(rand_point);
 
-        std::cout << "near index: " << near_node_ptr->index_.transpose() << std::endl;
-        double delta_dist = (rand_index - near_node_ptr->index_).cast<double>().norm();
-//        if (delta_dist * grid_resolution_ < 0.5) {
+//        double delta_dist = (rand_point - near_node_ptr->coordinate_).norm();
+//        if (delta_dist < grid_resolution_) {
 //            continue;
 //        }
 
-        Eigen::Vector3d new_pt_index = Steer(rand_index, near_node_ptr->index_, 0.5);
-        std::cout << "new index: " << new_pt_index.transpose() << std::endl;
-        Eigen::Vector3d new_pt_coord = GridIndex2Coord(new_pt_index.cast<int>());
-        std::cout << "new pt: " << new_pt_coord.transpose() << std::endl << std::endl << std::endl;
+        Eigen::Vector3d new_point = Steer(rand_point, near_node_ptr->coordinate_, grid_resolution_ * 3);
 
-        if (!CollisionFree(near_node_ptr->index_, new_pt_index.cast<int>())) {
+        if (!CollisionFree(near_node_ptr->coordinate_, new_point)) {
             continue;
         }
 
         RRTNode *new_node_ptr = new RRTNode;
-        new_node_ptr->index_ = new_pt_index.cast<int>();
-        new_node_ptr->coordinate_ = new_pt_coord;
+        new_node_ptr->coordinate_ = new_point;
         new_node_ptr->parent_ = near_node_ptr;
 
         nodes_ptr_.push_back(new_node_ptr);
 
-        if ((new_pt_coord - end_node_->coordinate_).norm() <= grid_resolution_) {
+        if ((new_point - end_node_->coordinate_).norm() <= grid_resolution_) {
             end_node_->parent_ = new_node_ptr;
             return true;
         }
 
-        kdtree_flann_.setInputCloud(GetNodesIndexPointCloud().makeShared());
+        kdtree_flann_.setInputCloud(GetNodesCoordPointCloud().makeShared());
     }
-
-    return false;
 }
 
 void RRT::Reset() {
     for (unsigned int i = 0; i < nodes_ptr_.size(); ++i) {
         delete nodes_ptr_[i];
+        nodes_ptr_[i] = nullptr;
     }
     nodes_ptr_.clear();
 }
