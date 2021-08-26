@@ -56,6 +56,7 @@ target_link_libraries( random_complex
 add_executable(compare_demo_node
     src/compare_demo_node.cpp
     src/RRT.cpp
+    src/RRT_star.cpp
 )
 target_link_libraries(compare_demo_node
     ${catkin_LIBRARIES}

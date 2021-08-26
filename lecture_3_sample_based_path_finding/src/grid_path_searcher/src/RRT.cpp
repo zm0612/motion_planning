@@ -3,7 +3,6 @@
 //
 #include "RRT.h"
 
-#include <cmath>
 #include <random>
 #include <iostream>
 
@@ -39,6 +38,17 @@ void RRT::SetObstacle(const Eigen::Vector3d &obstacle_coord) {
 RRT::~RRT() {
     delete[] map_data_;
     map_data_ = nullptr;
+
+    delete end_node_;
+    delete start_node_;
+    start_node_ = nullptr;
+    end_node_ = nullptr;
+
+    for (unsigned int i = 0; i < nodes_ptr_.size(); ++i) {
+        delete nodes_ptr_[i];
+        nodes_ptr_[i] = nullptr;
+    }
+    nodes_ptr_.clear();
 }
 
 Eigen::Vector3d RRT::GridIndex2Coord(const Eigen::Vector3i &index) {
@@ -174,12 +184,8 @@ bool RRT::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end
         Eigen::Vector3d rand_point = Sample();
         RRTNode *near_node_ptr = Near(rand_point);
 
-//        double delta_dist = (rand_point - near_node_ptr->coordinate_).norm();
-//        if (delta_dist < grid_resolution_) {
-//            continue;
-//        }
-
-        Eigen::Vector3d new_point = Steer(rand_point, near_node_ptr->coordinate_, grid_resolution_ * 3);
+        //TODO: 由于固定步长，可能会导致new_point的在地图之外，但是我懒得改了，加一个判断很容易！
+        Eigen::Vector3d new_point = Steer(rand_point, near_node_ptr->coordinate_, grid_resolution_ * 2);
 
         if (!CollisionFree(near_node_ptr->coordinate_, new_point)) {
             continue;

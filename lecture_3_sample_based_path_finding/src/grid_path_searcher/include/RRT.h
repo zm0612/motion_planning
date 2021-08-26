@@ -13,7 +13,7 @@ class RRT{
 public:
     RRT() = default;
 
-    ~RRT();
+    virtual ~RRT();
 
     void InitGridMap(const Eigen::Vector3d& xyz_coordinate_l, const Eigen::Vector3d& xyz_coordinate_u,
                      const Eigen::Vector3i& grid_size, const double& grid_resolution);
@@ -27,7 +27,7 @@ public:
      */
     Eigen::Vector3d CoordRounding(const Eigen::Vector3d& coord);
 
-    bool SearchPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt);
+    virtual bool SearchPath(const Eigen::Vector3d& start_pt, const Eigen::Vector3d& end_pt);
 
     std::vector<Eigen::Vector3d> GetPath();
 
