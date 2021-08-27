@@ -16,8 +16,13 @@ public:
     ~RRTStar() override;
 
 private:
-    std::vector<RRTNode *> NearC(const Eigen::Vector3d &new_point);
+    std::vector<RRTNode *> NearC(const Eigen::Vector3d &new_point, double search_radius);
 
+    void ChooseParent(const std::vector<RRTNode *> &near_nodes, RRTNode *const &new_node);
+
+    double GetPathLength(const RRTNode *start_node_ptr, const RRTNode *end_node_ptr);
+
+    void Rewire(std::vector<RRTNode *> &near_nodes, const RRTNode *const &new_node);
 };
 
 #endif //GRID_PATH_SEARCHER_RRT_STAR_H

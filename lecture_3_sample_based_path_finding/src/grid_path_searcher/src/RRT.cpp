@@ -184,7 +184,7 @@ bool RRT::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end
         Eigen::Vector3d rand_point = Sample();
         RRTNode *near_node_ptr = Near(rand_point);
 
-        //TODO: 由于固定步长，可能会导致new_point的在地图之外，但是我懒得改了，加一个判断很容易！
+        //TODO: 由于固定步长，可能会导致new_point的在地图之外，但是我懒得改了，加一个判断很容易, HAHA！
         Eigen::Vector3d new_point = Steer(rand_point, near_node_ptr->coordinate_, grid_resolution_ * 2);
 
         if (!CollisionFree(near_node_ptr->coordinate_, new_point)) {
