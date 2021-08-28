@@ -2,6 +2,7 @@
 // Created by meng on 2021/8/26.
 //
 #include "RRT_star.h"
+#include <ros/ros.h>
 
 RRTStar::~RRTStar() {
     delete[] map_data_;
@@ -35,6 +36,7 @@ bool RRTStar::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d 
     pcl::PointCloud<pcl::PointXYZ> point_cloud_node = GetNodesCoordPointCloud();
     kdtree_flann_.setInputCloud(point_cloud_node.makeShared());
 
+    ros::Time start_time = ros::Time::now();
     while (true) {
         Eigen::Vector3d rand_point = Sample();
         RRTNode *near_node_ptr = Near(rand_point);
@@ -45,24 +47,30 @@ bool RRTStar::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d 
             continue;
         }
 
-
         RRTNode *new_node_ptr = new RRTNode;
         new_node_ptr->coordinate_ = new_point;
 
+        std::vector<RRTNode *> near_nodes;
+        near_nodes = NearC(new_point, grid_resolution_ * 4);
+        ChooseParent(near_nodes, new_node_ptr);
+        Rewire(near_nodes, new_node_ptr);
+
+        /// TODO: 还需要对终点执行ChooseParent和Rewire操作，但是我不想改了，哈哈
         if ((new_point - end_node_->coordinate_).norm() <= grid_resolution_) {
             new_node_ptr->parent_ = near_node_ptr;
             end_node_->parent_ = new_node_ptr;
             return true;
         }
 
-        std::vector<RRTNode *> near_nodes;
-        near_nodes = NearC(new_point, grid_resolution_ * 3);
-        ChooseParent(near_nodes, new_node_ptr);
-        Rewire(near_nodes, new_node_ptr);
-
         nodes_ptr_.push_back(new_node_ptr);
 
         kdtree_flann_.setInputCloud(GetNodesCoordPointCloud().makeShared());
+
+        ros::Duration use_time = ros::Time::now() - start_time;
+        if (use_time.toSec() > 10.0){
+            ROS_ERROR_STREAM("rrt star has use time more than 10s ");
+            return false;
+        }
     }
 }
 
@@ -85,8 +93,11 @@ std::vector<RRTNode *> RRTStar::NearC(const Eigen::Vector3d &new_point, const do
 
 void RRTStar::ChooseParent(const std::vector<RRTNode *> &near_nodes, RRTNode *const &new_node) {
     double min_length = std::numeric_limits<double>::max();
-    RRTNode *parent_node;
+    RRTNode *parent_node = nullptr;
     for (unsigned int i = 0; i < near_nodes.size(); ++i) {
+        if (!CollisionFree(near_nodes[i]->coordinate_, new_node->coordinate_))
+            continue;
+
         new_node->parent_ = near_nodes[i];
 
         double length = GetPathLength(start_node_, new_node);
@@ -101,6 +112,9 @@ void RRTStar::ChooseParent(const std::vector<RRTNode *> &near_nodes, RRTNode *co
 
 void RRTStar::Rewire(std::vector<RRTNode *> &near_nodes, const RRTNode *const &new_node) {
     for (unsigned int i = 0; i < near_nodes.size(); ++i) {
+        if (!CollisionFree(near_nodes[i]->coordinate_, new_node->coordinate_))
+            continue;
+
         double dist_before = GetPathLength(start_node_, near_nodes[i]);
         double dist_after = GetPathLength(start_node_, new_node) +
                             (new_node->coordinate_ - near_nodes[i]->coordinate_).norm();

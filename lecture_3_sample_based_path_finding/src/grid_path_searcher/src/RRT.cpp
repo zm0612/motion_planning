@@ -3,6 +3,7 @@
 //
 #include "RRT.h"
 
+#include <ros/ros.h>
 #include <random>
 #include <iostream>
 
@@ -180,6 +181,7 @@ bool RRT::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end
     pcl::PointCloud<pcl::PointXYZ> point_cloud_node = GetNodesCoordPointCloud();
     kdtree_flann_.setInputCloud(point_cloud_node.makeShared());
 
+    ros::Time start_time = ros::Time::now();
     while (true) {
         Eigen::Vector3d rand_point = Sample();
         RRTNode *near_node_ptr = Near(rand_point);
@@ -203,6 +205,12 @@ bool RRT::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end
         }
 
         kdtree_flann_.setInputCloud(GetNodesCoordPointCloud().makeShared());
+
+        ros::Duration use_time = ros::Time::now() - start_time;
+        if (use_time.toSec() > 10.0){
+            ROS_ERROR_STREAM("rrt has use time more than 10s ");
+            return false;
+        }
     }
 }
 

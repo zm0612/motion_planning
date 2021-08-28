@@ -11,6 +11,7 @@
 #include <visualization_msgs/Marker.h>
 
 #include "RRT.h"
+#include "RRT_star.h"
 
 using namespace std;
 using namespace Eigen;
@@ -28,9 +29,10 @@ int _max_x_id, _max_y_id, _max_z_id;
 
 // ros related
 ros::Subscriber _map_sub, _pts_sub;
-ros::Publisher _grid_map_vis_pub, _RRTstar_path_vis_pub;
+ros::Publisher _grid_map_vis_pub, _RRTstar_path_vis_pub, _RRT_path_vis_pub;
 
-RRT* _rrt_path_finding = new RRT();
+RRT *_rrt_path_finding = new RRT();
+RRTStar *_rrt_star_path_finding = new RRTStar();
 
 void rcvWaypointsCallback(const nav_msgs::Path &wp);
 
@@ -40,24 +42,37 @@ void pathFinding(const Vector3d start_pt, const Vector3d target_pt);
 
 void visRRTstarPath(vector<Vector3d> nodes);
 
+void visRRTPath(vector<Vector3d> nodes);
+
 void rcvWaypointsCallback(const nav_msgs::Path &wp) {
     if (wp.poses[0].pose.position.z < 0.0 || !_has_map)
         return;
 
     Vector3d target_pt;
     target_pt << wp.poses[0].pose.position.x,
-                 wp.poses[0].pose.position.y,
-                 wp.poses[0].pose.position.z;
+            wp.poses[0].pose.position.y,
+            wp.poses[0].pose.position.z;
 
     ROS_INFO("[node] receive the planning target");
     ros::Time start = ros::Time::now();
-    _rrt_path_finding->SearchPath(_start_pt, target_pt);
-    ros::Time end = ros::Time::now();
-    ros::Duration rrt_use_time = end - start;
-    ROS_INFO_STREAM("rrt path finding use time: " << rrt_use_time.toSec());
-    auto path = _rrt_path_finding->GetPath();
-    visRRTstarPath(path);
-    _rrt_path_finding->Reset();
+    if (_rrt_path_finding->SearchPath(_start_pt, target_pt)) {
+        ros::Time end = ros::Time::now();
+        ros::Duration rrt_use_time = end - start;
+        ROS_INFO_STREAM("rrt path finding use time: " << rrt_use_time.toSec());
+        auto path = _rrt_path_finding->GetPath();
+        visRRTPath(path);
+        _rrt_path_finding->Reset();
+    }
+
+    ros::Time start_rrt_star = ros::Time::now();
+    if (_rrt_star_path_finding->SearchPath(_start_pt, target_pt)) {
+        ros::Time end_rrt_star = ros::Time::now();
+        ros::Duration rrt_star_use_time = end_rrt_star - start_rrt_star;
+        ROS_INFO_STREAM("rrt star path finding use time: " << rrt_star_use_time.toSec());
+        auto path_rrt_star = _rrt_star_path_finding->GetPath();
+        visRRTstarPath(path_rrt_star);
+        _rrt_star_path_finding->Reset();
+    }
 }
 
 /*!
@@ -82,6 +97,7 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
 
         // set obstalces into grid map for path planning
         _rrt_path_finding->SetObstacle(Vector3d(pt.x, pt.y, pt.z));
+        _rrt_star_path_finding->SetObstacle(Vector3d(pt.x, pt.y, pt.z));
 
         // for visualize only
         Vector3f cor_round = _rrt_path_finding->CoordRounding(Vector3d(pt.x, pt.y, pt.z)).cast<float>();
@@ -113,6 +129,7 @@ int main(int argc, char **argv) {
 
     _grid_map_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
     _RRTstar_path_vis_pub = nh.advertise<visualization_msgs::Marker>("RRTstar_path_vis", 1);
+    _RRT_path_vis_pub = nh.advertise<visualization_msgs::Marker>("RRT_path_vis", 1);
 
     nh.param("map/cloud_margin", _cloud_margin, 0.0);
     nh.param("map/resolution", _resolution, 0.2);
@@ -137,6 +154,7 @@ int main(int argc, char **argv) {
     _max_z_id = (int) (_z_size * _inv_resolution);
 
     _rrt_path_finding->InitGridMap(_map_lower, _map_upper, Vector3i(_max_x_id, _max_y_id, _max_z_id), _resolution);
+    _rrt_star_path_finding->InitGridMap(_map_lower, _map_upper, Vector3i(_max_x_id, _max_y_id, _max_z_id), _resolution);
 
     ros::Rate rate(100);
     while (ros::ok()) {
@@ -145,6 +163,7 @@ int main(int argc, char **argv) {
     }
 
     delete _rrt_path_finding;
+    delete _rrt_star_path_finding;
     return 0;
 }
 
@@ -160,9 +179,45 @@ void visRRTstarPath(vector<Vector3d> nodes) {
     Points.type = visualization_msgs::Marker::POINTS;
     Line.type = visualization_msgs::Marker::LINE_STRIP;
 
-    Points.scale.x = _resolution / 2;
-    Points.scale.y = _resolution / 2;
-    Line.scale.x = _resolution / 2;
+    Points.scale.x = _resolution / 3;
+    Points.scale.y = _resolution / 3;
+    Line.scale.x = _resolution / 3;
+
+    //points are green and Line Strip is blue
+    Points.color.g = 1.0f;
+    Points.color.a = 1.0;
+    Line.color.r = 1.0;
+    Line.color.a = 1.0;
+
+    geometry_msgs::Point pt;
+    for (int i = 0; i < int(nodes.size()); i++) {
+        Vector3d coord = nodes[i];
+        pt.x = coord(0);
+        pt.y = coord(1);
+        pt.z = coord(2);
+
+        Points.points.push_back(pt);
+        Line.points.push_back(pt);
+    }
+    _RRTstar_path_vis_pub.publish(Points);
+    _RRTstar_path_vis_pub.publish(Line);
+}
+
+void visRRTPath(vector<Vector3d> nodes) {
+    visualization_msgs::Marker Points, Line;
+    Points.header.frame_id = Line.header.frame_id = "world";
+    Points.header.stamp = Line.header.stamp = ros::Time::now();
+    Points.ns = Line.ns = "compare_demo_node/RRTPath";
+    Points.action = Line.action = visualization_msgs::Marker::ADD;
+    Points.pose.orientation.w = Line.pose.orientation.w = 1.0;
+    Points.id = 0;
+    Line.id = 1;
+    Points.type = visualization_msgs::Marker::POINTS;
+    Line.type = visualization_msgs::Marker::LINE_STRIP;
+
+    Points.scale.x = _resolution / 3;
+    Points.scale.y = _resolution / 3;
+    Line.scale.x = _resolution / 3;
 
     //points are green and Line Strip is blue
     Points.color.g = 1.0f;
@@ -180,6 +235,6 @@ void visRRTstarPath(vector<Vector3d> nodes) {
         Points.points.push_back(pt);
         Line.points.push_back(pt);
     }
-    _RRTstar_path_vis_pub.publish(Points);
-    _RRTstar_path_vis_pub.publish(Line);
+    _RRT_path_vis_pub.publish(Points);
+    _RRT_path_vis_pub.publish(Line);
 }
