@@ -109,6 +109,7 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
 }
 
 void trajectoryLibrary(const Vector3d start_pt, const Vector3d start_velocity, const Vector3d target_pt) {
+    ros::Time start_time = ros::Time::now();
     Vector3d acc_input;
     Vector3d pos, vel;
     int a = 0;
@@ -119,6 +120,7 @@ void trajectoryLibrary(const Vector3d start_pt, const Vector3d start_velocity, c
     double Trajctory_Cost;
     TraLibrary = new TrajectoryStatePtr **[_discretize_step + 1];//recored all trajectories after input
 
+    //如果想要加快以下过程，可以采用for循环并行加速
     for (int i = 0; i <= _discretize_step; i++) {//acc_input_ax
         TraLibrary[i] = new TrajectoryStatePtr *[_discretize_step + 1];
         for (int j = 0; j <= _discretize_step; j++) {//acc_input_ay
@@ -178,6 +180,10 @@ void trajectoryLibrary(const Vector3d start_pt, const Vector3d start_velocity, c
         }
     }
     TraLibrary[a][b][c]->setOptimal();
+    ros::Time end_time = ros::Time::now();
+    ros::Duration use_time = end_time - start_time;
+    ROS_INFO("\033[1;32m --> use time: %f (ms)\033[0m", use_time.toSec() * 1000);
+
     visTraLibrary(TraLibrary);
 }
 

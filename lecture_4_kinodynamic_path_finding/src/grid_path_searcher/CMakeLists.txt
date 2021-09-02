@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(grid_path_searcher)
 
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -O3 -Wall") # -Wextra -Werror
+
 find_package(catkin REQUIRED COMPONENTS 
     roscpp 
     std_msgs
@@ -26,7 +29,12 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
 )
 
-set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -O3 -Wall") # -Wextra -Werror
+add_executable(Hybrid_A_star_node
+    src/Hybrid_A_star.cpp)
+target_link_libraries(Hybrid_A_star_node
+    ${catkin_LIBRARIES}
+    ${PCL_LIBRARIES}
+)
 
 add_executable( demo_node 
     src/demo_node.cpp
