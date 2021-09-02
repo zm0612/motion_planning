@@ -6,7 +6,7 @@
 #include <ros/console.h>
 #include <Eigen/Eigen>
 #include "backward.hpp"
-#include "math.h"
+#include <cmath>
 #include <State.h>
 
 class Homeworktool

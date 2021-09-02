@@ -14,3 +14,30 @@ OBVP问题的求解步骤：
 
 <img src="doc/obvp.jpg" alt="obvp" style="zoom: 50%;" />
 
+> 可以参考博客：https://blog.csdn.net/gophae/article/details/107921163
+
+### 1.1 多项式的解析解
+
+对于OBVP问题，需要求解J的最小值。一般思路是对J进行求导，去极值为零的点对应的t。通过运算发现J的导数是关于t的四阶方程，对于一元四阶方程的求根方法可以采用伴随矩阵的方法。
+
+<img src="doc/solve_polynomial.png" alt="solve_polynomial" style="zoom:50%;" />
+
+>  去特征值最大的那个t最为最优解，目的是让机器人可以沿着当前控制量尽可能的运动更远。
+
+## 2. OBVP实际应用例子
+
+对于模型的系统(无人机)，给定初始化速度和位置以及末状态的位置和速度，它的OBVP建模和求解过程如下：
+
+<img src="doc/OBVP_example_1.png" alt="OBVP_example_1" style="zoom:50%;" />
+
+<img src="doc/OBVP_example_2.png" alt="OBVP_example_2" style="zoom:50%;" />
+
+当需要完成一层lattice graph搜索时，在控制空间离散不同方向的加速度得到一层lattice graph，然后通过启发函数来判断哪一条采样的轨迹是代价最小的。启发函数的设计是，假设没有障碍，然后执行状态空间搜索，直接判断当前状态到末状态的代价，最小代价即为最优。
+
+**实验结果如下**
+
+<img src="doc/single_lattice_graph.png" alt="single_lattice_graph" style="zoom:50%;" />
+
+上图中设置终点在左下角，然后执行空间空间采样，得到不同加速度下的离散轨迹，对于那些没有障碍物的轨迹，执行OBVP(当前点到目标点)计算，得到代价最小的轨迹。
+
+> 红色表示当前轨迹有障碍物，蓝色表示没有障碍物，绿色代价最优的轨迹。
