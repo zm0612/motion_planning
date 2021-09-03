@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <math.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
@@ -8,12 +7,12 @@
 #include <ros/console.h>
 #include <sensor_msgs/PointCloud2.h>
 
-#include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 
+#include "Hybrid_A_star.h"
 #include <hw_tool.h>
 #include "backward.hpp"
 
@@ -42,10 +41,11 @@ ros::Publisher _grid_map_vis_pub, _path_vis_pub;
 // Integral parameter
 double _max_input_acc = 1.0;
 int _discretize_step = 2;
-double _time_interval = 1.25;
+double _time_interval = 0.5;
 int _time_step = 50;
 
 Homeworktool *_homework_tool = new Homeworktool();
+HybridAStar *_hybrid_a_star = new HybridAStar();
 TrajectoryStatePtr ***TraLibrary;
 
 void rcvWaypointsCallback(const nav_msgs::Path &wp);
@@ -56,6 +56,8 @@ void trajectoryLibrary(const Eigen::Vector3d start_pt, const Eigen::Vector3d sta
                        const Eigen::Vector3d target_pt);
 
 void visTraLibrary(TrajectoryStatePtr ***TraLibrary);
+
+void visHybridAStarPath(const std::vector<Eigen::Vector3d> &path);
 
 void rcvWaypointsCallback(const nav_msgs::Path &wp) {
     if (wp.poses[0].pose.position.z < 0.0 || !_has_map)
@@ -68,6 +70,15 @@ void rcvWaypointsCallback(const nav_msgs::Path &wp) {
 
     ROS_INFO("[node] receive the planning target");
     trajectoryLibrary(_start_pt, _start_velocity, target_pt);
+    std::cout << "haha0" << std::endl;
+    _hybrid_a_star->SearchPath(_start_pt, target_pt);
+    std::cout << "haha1" << std::endl;
+    auto path = _hybrid_a_star->GetPath();
+    std::cout << "haha2" << std::endl;
+    visHybridAStarPath(path);
+    std::cout << "haha3" << std::endl;
+    _hybrid_a_star->Reset();
+    std::cout << "haha4" << std::endl;
 }
 
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
@@ -87,6 +98,7 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
 
         // set obstalces into grid map for path planning
         _homework_tool->setObs(pt.x, pt.y, pt.z);
+        _hybrid_a_star->setObs(pt.x, pt.y, pt.z);
 
         // for visualize only
         Vector3d cor_round = _homework_tool->coordRounding(Vector3d(pt.x, pt.y, pt.z));
@@ -221,8 +233,8 @@ int main(int argc, char **argv) {
     _max_y_id = (int) (_y_size * _inv_resolution);
     _max_z_id = (int) (_z_size * _inv_resolution);
 
-    _homework_tool = new Homeworktool();
     _homework_tool->initGridMap(_resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
+    _hybrid_a_star->initGridMap(_resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
 
     ros::Rate rate(100);
     bool status = ros::ok();
@@ -236,6 +248,38 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+void visHybridAStarPath(const std::vector<Eigen::Vector3d> &path) {
+    visualization_msgs::MarkerArray line_array;
+    visualization_msgs::Marker line;
+
+    line.header.frame_id = "world";
+    line.header.stamp = ros::Time::now();
+    line.ns = "demo_node/hybrid_a_star_";
+    line.action = visualization_msgs::Marker::ADD;
+    line.pose.orientation.w = 1.0;
+    line.type = visualization_msgs::Marker::LINE_STRIP;
+    line.scale.x = _resolution / 5;
+
+    line.color.r = 0.0;
+    line.color.g = 1.0;
+    line.color.b = 0.0;
+    line.color.a = 1.0;
+
+    int marker_id = 0;
+    line.points.clear();
+    geometry_msgs::Point pt;
+    line.id = marker_id;
+    for (unsigned int index = 0; index < path.size(); index++) {
+        Vector3d coord = path[index];
+        pt.x = coord(0);
+        pt.y = coord(1);
+        pt.z = coord(2);
+        line.points.push_back(pt);
+    }
+    line_array.markers.push_back(line);
+    _path_vis_pub.publish(line_array);
+}
+
 void visTraLibrary(TrajectoryStatePtr ***TraLibrary) {
     double _resolution = 0.2;
     visualization_msgs::MarkerArray LineArray;
@@ -243,7 +287,7 @@ void visTraLibrary(TrajectoryStatePtr ***TraLibrary) {
 
     Line.header.frame_id = "world";
     Line.header.stamp = ros::Time::now();
-    Line.ns = "demo_node/TraLibrary";
+    Line.ns = "demo_node/TraLibrary_";
     Line.action = visualization_msgs::Marker::ADD;
     Line.pose.orientation.w = 1.0;
     Line.type = visualization_msgs::Marker::LINE_STRIP;

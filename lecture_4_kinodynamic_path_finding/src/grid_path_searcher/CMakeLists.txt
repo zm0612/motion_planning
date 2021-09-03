@@ -29,16 +29,10 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
 )
 
-add_executable(Hybrid_A_star_node
-    src/Hybrid_A_star.cpp)
-target_link_libraries(Hybrid_A_star_node
-    ${catkin_LIBRARIES}
-    ${PCL_LIBRARIES}
-)
-
-add_executable( demo_node 
+add_executable( demo_node
     src/demo_node.cpp
-    src/hw_tool.cpp)
+    src/hw_tool.cpp
+    src/Hybrid_A_star.cpp)
 
 target_link_libraries(demo_node 
     ${catkin_LIBRARIES}
