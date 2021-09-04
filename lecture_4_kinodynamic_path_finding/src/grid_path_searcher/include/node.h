@@ -14,7 +14,6 @@ struct GridNode;
 typedef GridNode *GridNodePtr;
 
 struct GridNode {
-    bool has_obvp_;
     int id_;//1: open set   -1: closed set   0: not visited
     Eigen::Vector3d coord_;//当前这段轨迹终点坐标
     Eigen::Vector3i index_;//当前栅格的索引
@@ -28,11 +27,10 @@ struct GridNode {
 
     GridNode(Eigen::Vector3i index, Eigen::Vector3d coord) {
         id_ = 0;
-        has_obvp_ = false;
         index_ = std::move(index);
         coord_ = std::move(coord);
-        g_score_ = std::numeric_limits<double>::min();
-        f_score_ = std::numeric_limits<double>::min();
+        g_score_ = std::numeric_limits<double>::max();
+        f_score_ = std::numeric_limits<double>::max();
         parent_ = nullptr;
         trajectory_ = nullptr;
     }

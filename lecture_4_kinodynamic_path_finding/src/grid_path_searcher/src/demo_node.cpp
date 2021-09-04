@@ -36,12 +36,12 @@ int _max_x_id, _max_y_id, _max_z_id;
 
 // ros related
 ros::Subscriber _map_sub, _pts_sub;
-ros::Publisher _grid_map_vis_pub, _path_vis_pub;
+ros::Publisher _grid_map_vis_pub, _path_vis_pub, _hybrid_a_star_vis_pub;
 
 // Integral parameter
 double _max_input_acc = 1.0;
 int _discretize_step = 2;
-double _time_interval = 0.5;
+double _time_interval = 1.25;
 int _time_step = 50;
 
 Homeworktool *_homework_tool = new Homeworktool();
@@ -70,15 +70,10 @@ void rcvWaypointsCallback(const nav_msgs::Path &wp) {
 
     ROS_INFO("[node] receive the planning target");
     trajectoryLibrary(_start_pt, _start_velocity, target_pt);
-    std::cout << "haha0" << std::endl;
     _hybrid_a_star->SearchPath(_start_pt, target_pt);
-    std::cout << "haha1" << std::endl;
     auto path = _hybrid_a_star->GetPath();
-    std::cout << "haha2" << std::endl;
     visHybridAStarPath(path);
-    std::cout << "haha3" << std::endl;
     _hybrid_a_star->Reset();
-    std::cout << "haha4" << std::endl;
 }
 
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
@@ -208,6 +203,7 @@ int main(int argc, char **argv) {
 
     _grid_map_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
     _path_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("RRTstar_path_vis", 1);
+    _hybrid_a_star_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("hybrid_a_star_path_vis", 1);
 
     nh.param("map/cloud_margin", _cloud_margin, 0.0);
     nh.param("map/resolution", _resolution, 0.2);
@@ -277,7 +273,7 @@ void visHybridAStarPath(const std::vector<Eigen::Vector3d> &path) {
         line.points.push_back(pt);
     }
     line_array.markers.push_back(line);
-    _path_vis_pub.publish(line_array);
+    _hybrid_a_star_vis_pub.publish(line_array);
 }
 
 void visTraLibrary(TrajectoryStatePtr ***TraLibrary) {

@@ -11,6 +11,7 @@
 
 using namespace Eigen;
 
+///TODO: 没有做内存泄露检查，可能会出现内存泄露的问题
 class HybridAStar {
 public:
     HybridAStar() = default;
@@ -38,9 +39,9 @@ private:
     GridNodePtr ***GridNodeMap_;
 
     uint8_t *data;
-    int discretize_step_ = 2;
+    int discretize_step_ = 3;
     double max_input_acc_ = 1.0;
-    double time_interval_ = 1.25;
+    double time_interval_ = 1.0;
     int time_step_ = 50;
 
     int GLX_SIZE_, GLY_SIZE_, GLZ_SIZE_;
@@ -58,8 +59,8 @@ private:
     Eigen::Vector3i coord2gridIndex(const Eigen::Vector3d &pt);
 
     void GetNeighbors(TrajectoryStatePtr ***trajectory_state_ptr,
-                      std::vector<GridNodePtr> &neighbors_ptr,
-                      std::vector<double> &neighbors_cost);
+                      std::vector<GridNodePtr> &neighbors,
+                      std::vector<TrajectoryStatePtr> &neighbors_traj_state);
 
     double OptimalBVP(Eigen::Vector3d start_position,
                       Eigen::Vector3d start_velocity,

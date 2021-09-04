@@ -163,6 +163,7 @@ double HybridAStar::OptimalBVP(Eigen::Vector3d start_position, Eigen::Vector3d s
 }
 
 void HybridAStar::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vector3d &end_pt) {
+    ros::Time start_time = ros::Time::now();
     Eigen::Vector3i start_idx = coord2gridIndex(start_pt);
     Eigen::Vector3d start_velocity(0.0, 0.0, 0.0);
 
@@ -177,16 +178,19 @@ void HybridAStar::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vecto
     open_set_.insert(std::make_pair(start_node_ptr->f_score_, start_node_ptr));
 
     std::vector<GridNodePtr> neighbors_ptr;
-    std::vector<double> neighbors_cost;
+    std::vector<TrajectoryStatePtr> neighbors_traj_state;
 
+    ///TODO: 当固定每次搜索的路径长度时，会出现遍历openset到空也不能找到路径
     while (!open_set_.empty()) {
         current_node_ptr = open_set_.begin()->second;
         current_node_ptr->id_ = -1;
         open_set_.erase(open_set_.begin());
 
         double dist = (current_node_ptr->coord_ - end_pt).norm();
-        if (dist < 10 * resolution_) {
+        if (dist < resolution_) {
             terminate_ptr_ = current_node_ptr;
+            ros::Duration use_time = ros::Time::now() - start_time;
+            ROS_INFO("\033[1;32m --> hybrid A* use time: %f (ms)\033[0m", use_time.toSec() * 1000);
             return;
         }
 
@@ -199,25 +203,29 @@ void HybridAStar::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vecto
                                                      current_node_ptr->trajectory_->Velocity.back(), end_pt);
         }
 
-        GetNeighbors(trajectory_state_ptr, neighbors_ptr, neighbors_cost);
+        GetNeighbors(trajectory_state_ptr, neighbors_ptr, neighbors_traj_state);
 
         for (unsigned int i = 0; i < neighbors_ptr.size(); ++i) {
             neighbor_node_ptr = neighbors_ptr[i];
 
+            ///TODO: G score用的是到起点的欧氏距离，这很明显是不合理的，更合理的方式应该是选用类似最低能量代价等
             double delta_score = (neighbor_node_ptr->coord_ - current_node_ptr->coord_).norm();
             if (neighbor_node_ptr->id_ == 0) {
                 neighbor_node_ptr->g_score_ = current_node_ptr->g_score_ + delta_score;
-                neighbor_node_ptr->f_score_ =
-                        neighbor_node_ptr->g_score_ + neighbors_cost[i];
+                neighbor_node_ptr->f_score_ = neighbor_node_ptr->g_score_ + neighbors_traj_state[i]->Trajctory_Cost;
                 neighbor_node_ptr->parent_ = current_node_ptr;
+                neighbor_node_ptr->trajectory_ = neighbors_traj_state[i];
                 open_set_.insert(std::make_pair(neighbor_node_ptr->f_score_, neighbor_node_ptr));
+
                 neighbor_node_ptr->id_ = 1;
                 continue;
             } else if (neighbor_node_ptr->id_ == 1) {
                 if (neighbor_node_ptr->g_score_ > current_node_ptr->g_score_ + delta_score) {
                     neighbor_node_ptr->g_score_ = current_node_ptr->g_score_ + delta_score;
-                    neighbor_node_ptr->f_score_ = neighbor_node_ptr->g_score_ + neighbors_cost[i];
+                    neighbor_node_ptr->f_score_ = neighbor_node_ptr->g_score_ + neighbors_traj_state[i]->Trajctory_Cost;
                     neighbor_node_ptr->parent_ = current_node_ptr;
+                    delete neighbor_node_ptr->trajectory_;
+                    neighbor_node_ptr->trajectory_ = neighbors_traj_state[i];
 
                     std::multimap<double, GridNodePtr>::iterator map_iter = open_set_.begin();
                     for (; map_iter != open_set_.end(); map_iter++) {
@@ -234,6 +242,7 @@ void HybridAStar::SearchPath(const Eigen::Vector3d &start_pt, const Eigen::Vecto
             }
         }
     }
+    ROS_WARN_STREAM("Hybrid A* failed to search path!");
 }
 
 TrajectoryStatePtr ***HybridAStar::trajectoryLibrary(const Eigen::Vector3d &start_pt,
@@ -260,7 +269,8 @@ TrajectoryStatePtr ***HybridAStar::trajectoryLibrary(const Eigen::Vector3d &star
                 vector<Vector3d> Velocity;
                 acc_input(0) = double(-max_input_acc_ + i * (2 * max_input_acc_ / double(discretize_step_)));
                 acc_input(1) = double(-max_input_acc_ + j * (2 * max_input_acc_ / double(discretize_step_)));
-                acc_input(2) = double(k * (2 * max_input_acc_ / double(discretize_step_)) + 0.1);//acc_input_az >0.1
+                ///TODO: 当Z轴加速度取负轨迹会出现异常，规划出来的轨迹会跑到地图之外
+                acc_input(2) = double(k * (2 * max_input_acc_ / double(discretize_step_)));
 
                 pos(0) = start_pt(0);
                 pos(1) = start_pt(1);
@@ -275,6 +285,7 @@ TrajectoryStatePtr ***HybridAStar::trajectoryLibrary(const Eigen::Vector3d &star
                 double delta_time;
                 delta_time = time_interval_ / double(time_step_);
 
+                ///TODO: 增加动态规划轨迹长度的功能，当轨迹在目标附近时，应该减小轨迹长度
                 for (int step = 0; step <= time_step_; step++) {
                     pos = pos + vel * delta_time + 0.5 * acc_input * delta_time * delta_time;
                     vel = vel + acc_input * delta_time;
@@ -284,7 +295,6 @@ TrajectoryStatePtr ***HybridAStar::trajectoryLibrary(const Eigen::Vector3d &star
                     double coord_x = pos(0);
                     double coord_y = pos(1);
                     double coord_z = pos(2);
-                    //check if if the trajectory face the obstacle
                     if (isObsFree(coord_x, coord_y, coord_z) != 1) {
                         collision = true;
                     }
@@ -292,14 +302,11 @@ TrajectoryStatePtr ***HybridAStar::trajectoryLibrary(const Eigen::Vector3d &star
 
                 Trajctory_Cost = OptimalBVP(pos, vel, target_pt);
 
-                //input the trajetory in the trajectory library
                 TraLibrary[i][j][k] = new TrajectoryState(Position, Velocity, Trajctory_Cost);
 
-                //if there is not any obstacle in the trajectory we need to set 'collision_check = true', so this trajectory is useable
                 if (collision)
                     TraLibrary[i][j][k]->setCollisionfree();
 
-                //record the min_cost in the trajectory Library, and this is the part pf selecting the best trajectory cloest to the planning traget
                 if (Trajctory_Cost < min_Cost && !TraLibrary[i][j][k]->collision_check) {
                     a = i;
                     b = j;
@@ -316,39 +323,49 @@ TrajectoryStatePtr ***HybridAStar::trajectoryLibrary(const Eigen::Vector3d &star
 
 void HybridAStar::GetNeighbors(TrajectoryStatePtr ***trajectory_state_ptr,
                                std::vector<GridNodePtr> &neighbors,
-                               std::vector<double> &neighbors_cost) {
-
-    std::vector<Eigen::Vector3i> neighbors_index;
+                               vector<TrajectoryStatePtr> &neighbors_traj_state) {
+    neighbors.clear();
+    neighbors_traj_state.clear();
+    std::unordered_map<int, std::pair<GridNodePtr, TrajectoryStatePtr>> candidates_grid_node_traj;
 
     for (int i = 0; i < discretize_step_; ++i) {
         for (int j = 0; j < discretize_step_; ++j) {
             for (int k = 0; k < discretize_step_; ++k) {
                 auto current_trajectory_state_ptr = trajectory_state_ptr[i][j][k];
+
+                if (current_trajectory_state_ptr->collision_check) {
+                    delete current_trajectory_state_ptr;
+                    continue;
+                }
+
                 Eigen::Vector3d coord_end = current_trajectory_state_ptr->Position.back();
                 Eigen::Vector3i index_end = coord2gridIndex(coord_end);
 
-                auto current_grid_node_ptr = GridNodeMap_[index_end.x()][index_end.y()][index_end.z()];
-                if (!current_grid_node_ptr->has_obvp_) {
-                    current_grid_node_ptr->trajectory_ = current_trajectory_state_ptr;
-                    neighbors_index.emplace_back(index_end);
+                const int index = k * i * j + j * i + i;
+                if (candidates_grid_node_traj.count(index) == 0) {
+                    GridNodePtr current_grid_node_ptr;
+                    current_grid_node_ptr = GridNodeMap_[index_end.x()][index_end.y()][index_end.z()];
+                    current_grid_node_ptr->coord_ = coord_end;
+                    candidates_grid_node_traj[index] = std::make_pair(current_grid_node_ptr,
+                                                                      current_trajectory_state_ptr);
                 } else {
                     if (current_trajectory_state_ptr->Trajctory_Cost <
-                        current_grid_node_ptr->trajectory_->Trajctory_Cost) {
-                        current_grid_node_ptr->trajectory_ = current_trajectory_state_ptr;
+                        candidates_grid_node_traj[index].second->Trajctory_Cost) {
+                        GridNodePtr current_grid_node_ptr;
+                        current_grid_node_ptr = GridNodeMap_[index_end.x()][index_end.y()][index_end.z()];
+                        current_grid_node_ptr->coord_ = coord_end;
+                        candidates_grid_node_traj[index] = std::make_pair(current_grid_node_ptr,
+                                                                          current_trajectory_state_ptr);
                     }
                 }
             }
         }
     }
 
-    for (unsigned int i = 0; i < neighbors_index.size(); ++i) {
-        int x = neighbors_index[i].x();
-        int y = neighbors_index[i].y();
-        int z = neighbors_index[i].z();
-        auto grid_node_ptr = GridNodeMap_[x][y][z];
-        grid_node_ptr->has_obvp_ = false;
-        neighbors.emplace_back(grid_node_ptr);
-        neighbors_cost.emplace_back(grid_node_ptr->trajectory_->Trajctory_Cost);
+    auto iter = candidates_grid_node_traj.begin();
+    for (; iter != candidates_grid_node_traj.end(); ++iter) {
+        neighbors.emplace_back(iter->second.first);
+        neighbors_traj_state.emplace_back(iter->second.second);
     }
 }
 
@@ -363,8 +380,11 @@ std::vector<Eigen::Vector3d> HybridAStar::GetPath() {
     }
 
     for (auto &ptr: grid_path) {
-        for (auto posi : ptr->trajectory_->Position) {
-            path.emplace_back(posi);
+        if (ptr->trajectory_ == nullptr) {
+            continue;
+        }
+        for (auto iter = ptr->trajectory_->Position.end() - 1; iter != ptr->trajectory_->Position.begin(); iter--) {
+            path.emplace_back(*iter);
         }
     }
 
@@ -377,11 +397,13 @@ void HybridAStar::Reset() {
     for (int i = 0; i < GLX_SIZE_; i++)
         for (int j = 0; j < GLY_SIZE_; j++)
             for (int k = 0; k < GLZ_SIZE_; k++) {
-                GridNodeMap_[i][j][k]->id_ = 0;
-                GridNodeMap_[i][j][k]->g_score_ = std::numeric_limits<double>::max();
-                GridNodeMap_[i][j][k]->f_score_ = std::numeric_limits<double>::max();
-                GridNodeMap_[i][j][k]->parent_ = nullptr;
-                delete GridNodeMap_[i][j][k]->trajectory_;
-                GridNodeMap_[i][j][k]->trajectory_ = nullptr;
+                if (GridNodeMap_[i][j][k] != nullptr) {
+                    GridNodeMap_[i][j][k]->id_ = 0;
+                    GridNodeMap_[i][j][k]->g_score_ = std::numeric_limits<double>::max();
+                    GridNodeMap_[i][j][k]->f_score_ = std::numeric_limits<double>::max();
+                    GridNodeMap_[i][j][k]->parent_ = nullptr;
+                    delete GridNodeMap_[i][j][k]->trajectory_;
+                    GridNodeMap_[i][j][k]->trajectory_ = nullptr;
+                }
             }
 }
