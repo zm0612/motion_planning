@@ -6,20 +6,21 @@
 #include <fstream>
 #include <string>
 
-using namespace std;    
+using namespace std;
 using namespace Eigen;
 
-TrajectoryGeneratorWaypoint::TrajectoryGeneratorWaypoint(){}
-TrajectoryGeneratorWaypoint::~TrajectoryGeneratorWaypoint(){}
+TrajectoryGeneratorWaypoint::TrajectoryGeneratorWaypoint() {}
+
+TrajectoryGeneratorWaypoint::~TrajectoryGeneratorWaypoint() {}
 
 //define factorial function, input i, output i!
-int TrajectoryGeneratorWaypoint::Factorial(int x)
-{
+int TrajectoryGeneratorWaypoint::Factorial(int x) {
     int fac = 1;
-    for(int i = x; i > 0; i--)
+    for (int i = x; i > 0; i--)
         fac = fac * i;
     return fac;
 }
+
 /*
 
     STEP 2: Learn the "Closed-form solution to minimum snap" in L5, then finish this PolyQPGeneration function
@@ -34,24 +35,25 @@ int TrajectoryGeneratorWaypoint::Factorial(int x)
 */
 
 Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
-            const int d_order,                    // the order of derivative
-            const Eigen::MatrixXd &Path,          // waypoints coordinates (3d)
-            const Eigen::MatrixXd &Vel,           // boundary velocity
-            const Eigen::MatrixXd &Acc,           // boundary acceleration
-            const Eigen::VectorXd &Time)          // time allocation in each segment
+        const int d_order,                    // the order of derivative
+        const Eigen::MatrixXd &Path,          // waypoints coordinates (3d)
+        const Eigen::MatrixXd &Vel,           // boundary velocity
+        const Eigen::MatrixXd &Acc,           // boundary acceleration
+        const Eigen::VectorXd &Time)          // time allocation in each segment
 {
     // enforce initial and final velocity and accleration, for higher order derivatives, just assume them be 0;
-    int p_order   = 2 * d_order - 1;              // the order of polynomial
-    int p_num1d   = p_order + 1;                  // the number of variables in each segment
+    int p_order = 2 * d_order - 1;              // the order of polynomial
+    int p_num1d = p_order + 1;                  // the number of variables in each segment
 
-    int m = Time.size();                          // the number of segments
-    MatrixXd PolyCoeff = MatrixXd::Zero(m, 3 * p_num1d);           // position(x,y,z), so we need (3 * p_num1d) coefficients
-    VectorXd Px(p_num1d * m), Py(p_num1d * m), Pz(p_num1d * m);
+    int number_segments = Time.size();                        // the number of segments
+    MatrixXd PolyCoeff = MatrixXd::Zero(number_segments,
+                                        3 * p_num1d);// position(x,y,z), so we need (3 * p_num1d) coefficients
+    VectorXd Px(p_num1d * number_segments), Py(p_num1d * number_segments), Pz(p_num1d * number_segments);
 
-    /*   Produce Mapping Matrix A to the entire trajectory, A is a mapping matrix that maps polynomial coefficients to derivatives.   */
-    
+    /*   Produce Mapping Matrix M to the entire trajectory, M is a mapping matrix that maps polynomial coefficients to derivatives.   */
 
-    
+
+
 
 
 
@@ -61,7 +63,7 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
 
 
     /*   Produce the dereivatives in X, Y and Z axis directly.  */
-    
+
 
 
 
@@ -75,7 +77,7 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
 
 
     /*   Produce the Minimum Snap cost function, the Hessian Matrix   */
-    
+
 
 
 
