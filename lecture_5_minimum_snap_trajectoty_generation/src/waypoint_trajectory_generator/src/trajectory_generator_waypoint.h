@@ -6,23 +6,19 @@
 
 class TrajectoryGeneratorWaypoint {
 private:
-    double _qp_cost;
-    Eigen::MatrixXd _Q;
-    Eigen::VectorXd _Px, _Py, _Pz;
-public:
-    TrajectoryGeneratorWaypoint();
+    int Factorial(int x);
 
-    ~TrajectoryGeneratorWaypoint();
+public:
+    TrajectoryGeneratorWaypoint() = default;
+
+    ~TrajectoryGeneratorWaypoint() = default;
 
     Eigen::MatrixXd PolyQPGeneration(
-            const int order,
+            int order,
             const Eigen::MatrixXd &Path,
             const Eigen::MatrixXd &Vel,
             const Eigen::MatrixXd &Acc,
             const Eigen::VectorXd &Time);
-
-    int Factorial(int x);
 };
-
 
 #endif

@@ -1,21 +1,12 @@
-#include <string>
-#include <iostream>
 #include <fstream>
-#include <math.h>
+#include <cmath>
 #include <random>
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <nav_msgs/Path.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Point.h>
-#include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
-#include <quadrotor_msgs/PolynomialTrajectory.h>
-#include <sensor_msgs/Joy.h>
-#include <algorithm>
 
-// Useful customized headers
 #include "trajectory_generator_waypoint.h"
 
 using namespace std;
@@ -69,8 +60,6 @@ void rcvWaypointsCallBack(const nav_msgs::Path &wp) {
     for (int k = 0; k < (int) wp_list.size(); k++)
         waypoints.row(k + 1) = wp_list[k];
 
-    //Trajectory generation: use minimum snap trajectory generation method
-    //waypoints is the result of path planning (Manual in this homework)
     trajGeneration(waypoints);
 }
 
@@ -82,10 +71,8 @@ void trajGeneration(Eigen::MatrixXd path) {
 
     vel.row(0) = _startVel;
 
-    // give an arbitraty time allocation, all set all durations as 1 in the commented function.
     _polyTime = timeAllocation(path);
 
-    // generate a minimum-snap piecewise monomial polynomial-based trajectory
     _polyCoeff = trajectoryGeneratorWaypoint.PolyQPGeneration(_dev_order, path, vel, acc, _polyTime);
 
     visWayPointPath(path);
@@ -97,8 +84,8 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "traj_node");
     ros::NodeHandle nh("~");
 
-    nh.param("planning/vel", _Vel, 1.0);
-    nh.param("planning/acc", _Acc, 1.0);
+    nh.param("planning/vel", _Vel, 1.0);//当前机器人能运行的最大速度
+    nh.param("planning/acc", _Acc, 1.0);//当前机器人能运行的最大加速度
     nh.param("planning/dev_order", _dev_order, 3);
     nh.param("planning/min_order", _min_order, 3);
     nh.param("vis/vis_traj_width", _vis_traj_width, 0.15);
@@ -254,28 +241,47 @@ Vector3d getPosPoly(MatrixXd polyCoeff, int k, double t) {
             else
                 time(j) = pow(t, j);
 
-        ret(dim) = coeff.dot(time);
-        //cout << "dim:" << dim << " coeff:" << coeff << endl;
+        double temp_pose = 0.0;
+        for (int i = 0; i < time.rows(); ++i) {
+            temp_pose = temp_pose + coeff(i) * time(time.rows() - i - 1);
+        }
+        ret(dim) = temp_pose;
     }
 
     return ret;
 }
 
+/*!
+ * 用于轨迹生成过程中，每段轨迹的分配时间的计算
+ * @param Path 轨迹的航点
+ * @return 每段轨迹应该对应的时间
+ */
 VectorXd timeAllocation(MatrixXd Path) {
     VectorXd time(Path.rows() - 1);
-    time.setOnes();
+//    time.setOnes();
 
-    /*
+    //由于不想再花时间了，以下求解时间的算法很可能不稳定，会出现负数时间
+    double accel_time = _Vel / _Acc;
+    for (int i = 1; i < Path.size(); ++i) {
+        MatrixXd delta_dist = Path.row(i) - Path.row(i - 1);
+        const double max_dist = delta_dist.maxCoeff();
 
-    STEP 1: Learn the "trapezoidal velocity" of "TIme Allocation" in L5, then finish this timeAllocation function
+        if (max_dist < 0.5 * _Acc * accel_time * accel_time) {
+            time(i - 1) = sqrt(max_dist / (0.5 * _Acc));
+            continue;
+        }
 
-    variable declaration: _Vel, _Acc: _Vel = 1.0, _Acc = 1.0 in this homework, you can change these in the test.launch
+        double delta = pow(_Vel, 2) - 4 * _Acc * max_dist;
+        double t1, t2;
+        t1 = (-_Vel + sqrt(delta)) / (2 * _Acc);
+        t2 = (-_Vel - sqrt(delta)) / (2 * _Acc);
 
-    You need to return a variable "time" contains time allocation, which's type is VectorXd
-
-    The time allocation is many relative timeline but not one common timeline
-
-    */
+        if (min(t1, t2) <= 0) {
+            time(i - 1) = max(t1, t2);
+        } else {
+            time(i - 1) = min(t1, t2);
+        }
+    }
 
     return time;
 }

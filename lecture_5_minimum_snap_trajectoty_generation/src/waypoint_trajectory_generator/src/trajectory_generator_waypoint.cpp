@@ -1,17 +1,7 @@
 #include "trajectory_generator_waypoint.h"
-#include <cstdio>
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <iostream>
-#include <fstream>
-#include <string>
 
 using namespace std;
 using namespace Eigen;
-
-TrajectoryGeneratorWaypoint::TrajectoryGeneratorWaypoint() {}
-
-TrajectoryGeneratorWaypoint::~TrajectoryGeneratorWaypoint() {}
 
 /*!
  * 计算x的阶乘
@@ -25,16 +15,31 @@ int TrajectoryGeneratorWaypoint::Factorial(int x) {
     return fac;
 }
 
+/*!
+ * 通过闭式求解QP，得到每段拟合轨迹的多项式系数
+ * @param d_order 导数阶数。例如最小化jerk，则需要求解三次导数，则 d_order=3
+ * @param Path 航迹点的空间坐标(3D)
+ * @param Vel 航迹点对应的速度(中间点速度是待求的未知量)
+ * @param Acc 航迹点对应的加速度(中间点加速度是待求的未知量)
+ * @param Time 每段轨迹对应的时间周期
+ * @return 轨迹x,y,z三个方向上的多项式系数
+ *
+ * 返回矩阵(PolyCoeff)的数据格式：每一行是一段轨迹，第一列是x方向上的多项式次数，越左次数越高
+ * 第一段轨迹三个方向上的系数 | px_i px_(i-1) px_(i-2) ... px_1 px_0 | y ... | z ... |
+ * 第二段轨迹三个方向上的系数 | px_i px_(i-1) px_(i-2) ... px_1 px_0 | y ... | z ... |
+ *                          ........
+ *
+ * 注意：给定起始点和终点的速度加速度，更高阶的导数设置为0
+ */
 Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
-        const int d_order,                    // 导数的阶数, 其中d对应PPT中转换之后的p
-        const Eigen::MatrixXd &Path,          // 航点坐标 (3d)
-        const Eigen::MatrixXd &Vel,           // 边界速度
-        const Eigen::MatrixXd &Acc,           // 边界加速度
-        const Eigen::VectorXd &Time)          // 每一段轨迹的时间
-{ //给定起始点和终点的速度加速度，更高阶的导数设置为0
+        const int d_order,
+        const Eigen::MatrixXd &Path,
+        const Eigen::MatrixXd &Vel,
+        const Eigen::MatrixXd &Acc,
+        const Eigen::VectorXd &Time) {
 
-    const int p_order = 2 * d_order - 1;              //多项式的最高次数 p^(p_order)t^(p_order) + ...
-    const int p_num1d = p_order + 1;                  //每一段轨迹的变量个数，对于五阶多项式为：p5, p4, ... p0
+    const int p_order = 2 * d_order - 1;//多项式的最高次数 p^(p_order)t^(p_order) + ...
+    const int p_num1d = p_order + 1;//每一段轨迹的变量个数，对于五阶多项式为：p5, p4, ... p0
 
     const int number_segments = Time.size();
     //每一段都有x,y,z三个方向，每一段多项式的系数的个数有3*p_num1d
@@ -43,9 +48,9 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
     const int number_coefficients = p_num1d * number_segments;
     VectorXd Px(number_coefficients), Py(number_coefficients), Pz(number_coefficients);
 
-    /*   Produce Mapping Matrix M to the entire trajectory, M is a mapping matrix that maps polynomial coefficients to derivatives.   */
     const int M_block_rows = d_order * 2;
     const int M_block_cols = p_num1d;
+    //M：转换矩阵，将系数向量转换为方程的微分量
     MatrixXd M = MatrixXd::Zero(number_segments * M_block_rows, number_segments * M_block_cols);
     for (int i = 0; i < number_segments; ++i) {
         int row = i * M_block_rows, col = i * M_block_cols;
@@ -64,12 +69,10 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
         M.block(row, col, M_block_rows, M_block_cols) = sub_M;
     }
 
-    std::cout << "    M   " << std::endl;
-    std::cout << M << std::endl << std::endl;
-
     //构造选择矩阵C的过程非常复杂，但是只要多花点时间探索一些规律，举几个例子，应该是能写出来的!!
     const int number_valid_variables = (number_segments + 1) * d_order;
     const int number_fixed_variables = 2 * d_order + (number_segments - 1);
+    //C_T：选择矩阵，用于分离未知量和已知量
     MatrixXd C_T = MatrixXd::Zero(number_coefficients, number_valid_variables);
     for (int i = 0; i < number_coefficients; ++i) {
         if (i < d_order) {
@@ -110,9 +113,7 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
         }
     }
 
-    std::cout << "    C_T   " << std::endl;
-    std::cout << C_T << std::endl << std::endl;
-
+    // Q：二项式的系数矩阵
     MatrixXd Q = MatrixXd::Zero(number_coefficients, number_coefficients);
     for (int k = 0; k < number_segments; ++k) {
         MatrixXd sub_Q = MatrixXd::Zero(p_num1d, p_num1d);
@@ -132,16 +133,13 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
         Q.block(row, row, p_num1d, p_num1d) = sub_Q;
     }
 
-    std::cout << "    Q   " << std::endl;
-    std::cout << Q << std::endl << std::endl;
-
     MatrixXd R = C_T.transpose() * M.transpose().inverse() * Q * M.inverse() * C_T;
 
     for (int axis = 0; axis < 3; ++axis) {
         VectorXd d_selected = VectorXd::Zero(number_valid_variables);
         for (int i = 0; i < number_coefficients; ++i) {
             if (i == 0) {
-                d_selected(i) = Path(0, axis);//第0个点的x坐标值
+                d_selected(i) = Path(0, axis);
                 continue;
             }
 
@@ -177,11 +175,6 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
             }
         }
 
-        if (axis == 0) {
-            std::cout << "    d_selected   " << std::endl;
-            std::cout << d_selected << std::endl << std::endl;
-        }
-
         MatrixXd R_PP = R.block(number_fixed_variables, number_fixed_variables,
                                 number_valid_variables - number_fixed_variables,
                                 number_valid_variables - number_fixed_variables);
@@ -191,16 +184,17 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
 
         MatrixXd d_optimal = -R_PP.inverse() * R_FP.transpose() * d_F;
 
+        d_selected.tail(number_valid_variables - number_fixed_variables) = d_optimal;
         VectorXd d = C_T * d_selected;
 
         if (axis == 0)
-            Px = d;
+            Px = M.inverse() * d;
 
         if (axis == 1)
-            Py = d;
+            Py = M.inverse() * d;
 
         if (axis == 2)
-            Pz = d;
+            Pz = M.inverse() * d;
     }
 
     for (int i = 0; i < number_segments; ++i) {
@@ -226,4 +220,5 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
     }
 
     return PolyCoeff;
+    /// 该矩阵的实现其数学原理并不难，但是矩阵构造的细节实在是复杂啊
 }
