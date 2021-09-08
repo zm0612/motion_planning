@@ -90,8 +90,7 @@ void trajGeneration(Eigen::MatrixXd path) {
 
     visWayPointPath(path);
 
-    //After you finish your homework, you can use the function visWayPointTraj below to visulize your trajectory
-    //visWayPointTraj( _polyCoeff, _polyTime);
+    visWayPointTraj(_polyCoeff, _polyTime);
 }
 
 int main(int argc, char **argv) {
@@ -264,6 +263,7 @@ Vector3d getPosPoly(MatrixXd polyCoeff, int k, double t) {
 
 VectorXd timeAllocation(MatrixXd Path) {
     VectorXd time(Path.rows() - 1);
+    time.setOnes();
 
     /*
 
