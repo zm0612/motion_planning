@@ -9,7 +9,7 @@
         <param name="planning/acc" value="3.0"/>
         <param name="planning/dev_order" value="3"/>
         <param name="planning/min_order" value="3"/>
-        <param name="vis/vis_traj_width" value="0.15"/>
+        <param name="vis/vis_traj_width" value="0.10"/>
 
     </node>
 

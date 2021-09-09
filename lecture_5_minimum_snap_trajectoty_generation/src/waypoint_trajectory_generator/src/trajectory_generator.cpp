@@ -146,22 +146,22 @@ Eigen::MatrixXd TrajectoryGeneratorTool::SolveQPClosedForm(
                 continue;
             }
 
-            if (i == 1) {
+            if (i == 1 && order >= 2) {
                 d_selected(i) = Vel(0, axis);
                 continue;
             }
 
-            if (i == 2) {
+            if (i == 2 && order >= 3) {
                 d_selected(i) = Acc(0, axis);
                 continue;
             }
 
-            if (i == number_coefficients - order + 2) {
+            if (i == number_coefficients - order + 2 && order >= 3) {
                 d_selected(number_fixed_variables - order + 2) = Acc(1, axis);
                 continue;
             }
 
-            if (i == number_coefficients - order + 1) {
+            if (i == number_coefficients - order + 1 && order >= 2) {
                 d_selected(number_fixed_variables - order + 1) = Vel(1, axis);
                 continue;
             }
