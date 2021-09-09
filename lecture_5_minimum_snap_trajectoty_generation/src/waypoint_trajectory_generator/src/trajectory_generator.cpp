@@ -1,4 +1,7 @@
-#include "trajectory_generator_waypoint.h"
+//
+// Created by meng on 2020/9/9.
+//
+#include "trajectory_generator.h"
 
 using namespace std;
 using namespace Eigen;
@@ -8,7 +11,7 @@ using namespace Eigen;
  * @param x
  * @return x!
  */
-int TrajectoryGeneratorWaypoint::Factorial(int x) {
+int TrajectoryGeneratorTool::Factorial(int x) {
     int fac = 1;
     for (int i = x; i > 0; i--)
         fac = fac * i;
@@ -17,7 +20,7 @@ int TrajectoryGeneratorWaypoint::Factorial(int x) {
 
 /*!
  * 通过闭式求解QP，得到每段拟合轨迹的多项式系数
- * @param d_order 导数阶数。例如最小化jerk，则需要求解三次导数，则 d_order=3
+ * @param order 导数阶数。例如最小化jerk，则需要求解三次导数，则 d_order=3
  * @param Path 航迹点的空间坐标(3D)
  * @param Vel 航迹点对应的速度(中间点速度是待求的未知量)
  * @param Acc 航迹点对应的加速度(中间点加速度是待求的未知量)
@@ -31,14 +34,14 @@ int TrajectoryGeneratorWaypoint::Factorial(int x) {
  *
  * 注意：给定起始点和终点的速度加速度，更高阶的导数设置为0
  */
-Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
-        const int d_order,
+Eigen::MatrixXd TrajectoryGeneratorTool::SolveQPClosedForm(
+        int order,
         const Eigen::MatrixXd &Path,
         const Eigen::MatrixXd &Vel,
         const Eigen::MatrixXd &Acc,
         const Eigen::VectorXd &Time) {
 
-    const int p_order = 2 * d_order - 1;//多项式的最高次数 p^(p_order)t^(p_order) + ...
+    const int p_order = 2 * order - 1;//多项式的最高次数 p^(p_order)t^(p_order) + ...
     const int p_num1d = p_order + 1;//每一段轨迹的变量个数，对于五阶多项式为：p5, p4, ... p0
 
     const int number_segments = Time.size();
@@ -48,7 +51,7 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
     const int number_coefficients = p_num1d * number_segments;
     VectorXd Px(number_coefficients), Py(number_coefficients), Pz(number_coefficients);
 
-    const int M_block_rows = d_order * 2;
+    const int M_block_rows = order * 2;
     const int M_block_cols = p_num1d;
     //M：转换矩阵，将系数向量转换为方程的微分量
     MatrixXd M = MatrixXd::Zero(number_segments * M_block_rows, number_segments * M_block_cols);
@@ -56,13 +59,13 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
         int row = i * M_block_rows, col = i * M_block_cols;
         MatrixXd sub_M = MatrixXd::Zero(M_block_rows, M_block_cols);
 
-        for (int j = 0; j < d_order; ++j) {
+        for (int j = 0; j < order; ++j) {
             for (int k = 0; k < p_num1d; ++k) {
                 if (k < j)
                     continue;
 
                 sub_M(j, p_num1d - 1 - k) = Factorial(k) / Factorial(k - j) * pow(0, k - j);
-                sub_M(j + d_order, p_num1d - 1 - k) = Factorial(k) / Factorial(k - j) * pow(Time(i), k - j);
+                sub_M(j + order, p_num1d - 1 - k) = Factorial(k) / Factorial(k - j) * pow(Time(i), k - j);
             }
         }
 
@@ -70,44 +73,44 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
     }
 
     //构造选择矩阵C的过程非常复杂，但是只要多花点时间探索一些规律，举几个例子，应该是能写出来的!!
-    const int number_valid_variables = (number_segments + 1) * d_order;
-    const int number_fixed_variables = 2 * d_order + (number_segments - 1);
+    const int number_valid_variables = (number_segments + 1) * order;
+    const int number_fixed_variables = 2 * order + (number_segments - 1);
     //C_T：选择矩阵，用于分离未知量和已知量
     MatrixXd C_T = MatrixXd::Zero(number_coefficients, number_valid_variables);
     for (int i = 0; i < number_coefficients; ++i) {
-        if (i < d_order) {
+        if (i < order) {
             C_T(i, i) = 1;
             continue;
         }
 
-        if (i >= number_coefficients - d_order) {
-            const int delta_index = i - (number_coefficients - d_order);
-            C_T(i, number_fixed_variables - d_order + delta_index) = 1;
+        if (i >= number_coefficients - order) {
+            const int delta_index = i - (number_coefficients - order);
+            C_T(i, number_fixed_variables - order + delta_index) = 1;
             continue;
         }
 
-        if ((i % d_order == 0) && (i / d_order % 2 == 1)) {
-            const int index = i / (2 * d_order) + d_order;
+        if ((i % order == 0) && (i / order % 2 == 1)) {
+            const int index = i / (2 * order) + order;
             C_T(i, index) = 1;
             continue;
         }
 
-        if ((i % d_order == 0) && (i / d_order % 2 == 0)) {
-            const int index = i / (2 * d_order) + d_order - 1;
+        if ((i % order == 0) && (i / order % 2 == 0)) {
+            const int index = i / (2 * order) + order - 1;
             C_T(i, index) = 1;
             continue;
         }
 
-        if ((i % d_order != 0) && (i / d_order % 2 == 1)) {
-            const int temp_index_0 = i / (2 * d_order) * (2 * d_order) + d_order;
-            const int temp_index_1 = i / (2 * d_order) * (d_order - 1) + i - temp_index_0 - 1;
+        if ((i % order != 0) && (i / order % 2 == 1)) {
+            const int temp_index_0 = i / (2 * order) * (2 * order) + order;
+            const int temp_index_1 = i / (2 * order) * (order - 1) + i - temp_index_0 - 1;
             C_T(i, number_fixed_variables + temp_index_1) = 1;
             continue;
         }
 
-        if ((i % d_order != 0) && (i / d_order % 2 == 0)) {
-            const int temp_index_0 = (i - d_order) / (2 * d_order) * (2 * d_order) + d_order;
-            const int temp_index_1 = (i - d_order) / (2 * d_order) * (d_order - 1) + (i - d_order) - temp_index_0 - 1;
+        if ((i % order != 0) && (i / order % 2 == 0)) {
+            const int temp_index_0 = (i - order) / (2 * order) * (2 * order) + order;
+            const int temp_index_1 = (i - order) / (2 * order) * (order - 1) + (i - order) - temp_index_0 - 1;
             C_T(i, number_fixed_variables + temp_index_1) = 1;
             continue;
         }
@@ -119,13 +122,13 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
         MatrixXd sub_Q = MatrixXd::Zero(p_num1d, p_num1d);
         for (int i = 0; i <= p_order; ++i) {
             for (int l = 0; l <= p_order; ++l) {
-                if (p_num1d - i <= d_order || p_num1d - l <= d_order)
+                if (p_num1d - i <= order || p_num1d - l <= order)
                     continue;
 
-                sub_Q(i, l) = Factorial(p_order - i) / Factorial(p_order - d_order - i) *
-                              Factorial(p_order - l) / Factorial(p_order - d_order - l) /
-                              (p_order - i + p_order - l - (2 * d_order - 1)) *
-                              pow(Time(k), p_order - i + p_order - l - (2 * d_order - 1));
+                sub_Q(i, l) = Factorial(p_order - i) / Factorial(p_order - order - i) *
+                              Factorial(p_order - l) / Factorial(p_order - order - l) /
+                              (p_order - i + p_order - l - (2 * order - 1)) *
+                              pow(Time(k), p_order - i + p_order - l - (2 * order - 1));
             }
         }
 
@@ -153,24 +156,24 @@ Eigen::MatrixXd TrajectoryGeneratorWaypoint::PolyQPGeneration(
                 continue;
             }
 
-            if (i == number_coefficients - 1) {
-                d_selected(number_fixed_variables - 1) = Acc(1, axis);
+            if (i == number_coefficients - order + 2) {
+                d_selected(number_fixed_variables - order + 2) = Acc(1, axis);
                 continue;
             }
 
-            if (i == number_coefficients - 2) {
-                d_selected(number_fixed_variables - 2) = Vel(1, axis);
+            if (i == number_coefficients - order + 1) {
+                d_selected(number_fixed_variables - order + 1) = Vel(1, axis);
                 continue;
             }
 
-            if (i == number_coefficients - 3) {
-                d_selected(number_fixed_variables - 3) = Path(number_segments, axis);
+            if (i == number_coefficients - order) {
+                d_selected(number_fixed_variables - order) = Path(number_segments, axis);
                 continue;
             }
 
-            if ((i % d_order == 0) && (i / d_order % 2 == 0)) {
-                const int index = i / (2 * d_order) + d_order - 1;
-                d_selected(index) = Path(i / (2 * d_order), axis);
+            if ((i % order == 0) && (i / order % 2 == 0)) {
+                const int index = i / (2 * order) + order - 1;
+                d_selected(index) = Path(i / (2 * order), axis);
                 continue;
             }
         }

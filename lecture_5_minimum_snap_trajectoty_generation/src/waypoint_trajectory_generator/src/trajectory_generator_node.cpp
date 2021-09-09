@@ -1,3 +1,7 @@
+//
+// Created by meng on 2020/9/9.
+//
+
 #include <fstream>
 #include <cmath>
 #include <random>
@@ -7,28 +11,25 @@
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
 
-#include "trajectory_generator_waypoint.h"
+#include "trajectory_generator.h"
 
 using namespace std;
 using namespace Eigen;
 
-// Param from launch file
-double _vis_traj_width;
-double _Vel, _Acc;
-int _dev_order, _min_order;
+double visualization_traj_width;
+double Vel, Acc;
+int dev_order;//cost函数对应的导数阶数, =3: 最小化jerk =4: 最小化snap
+int min_order;
 
-// ros related
-ros::Subscriber _way_pts_sub;
-ros::Publisher _wp_traj_vis_pub, _wp_path_vis_pub;
+ros::Subscriber way_pts_sub;
+ros::Publisher waypoint_traj_vis_pub, waypoint_path_vis_pub;
 
-// for planning
-int _poly_num1D;
-MatrixXd _polyCoeff;
-VectorXd _polyTime;
-Vector3d _startPos = Vector3d::Zero();
-Vector3d _startVel = Vector3d::Zero();
+int poly_coeff_num;
+MatrixXd poly_coeff;
+VectorXd segment_traj_time;
+Vector3d start_position = Vector3d::Zero();
+Vector3d start_velocity = Vector3d::Zero();
 
-// declare
 void visWayPointTraj(MatrixXd polyCoeff, VectorXd time);
 
 void visWayPointPath(MatrixXd path);
@@ -37,11 +38,14 @@ Vector3d getPosPoly(MatrixXd polyCoeff, int k, double t);
 
 VectorXd timeAllocation(MatrixXd Path);
 
-void trajGeneration(Eigen::MatrixXd path);
+void TrajGeneration(const Eigen::MatrixXd &path);
 
 void rcvWaypointsCallBack(const nav_msgs::Path &wp);
 
-//Get the path points 
+/*!
+ * 订阅rviz发布的waypoints
+ * @param wp
+ */
 void rcvWaypointsCallBack(const nav_msgs::Path &wp) {
     vector<Vector3d> wp_list;
     wp_list.clear();
@@ -55,57 +59,62 @@ void rcvWaypointsCallBack(const nav_msgs::Path &wp) {
     }
 
     MatrixXd waypoints(wp_list.size() + 1, 3);
-    waypoints.row(0) = _startPos;
+    waypoints.row(0) = start_position;
 
     for (int k = 0; k < (int) wp_list.size(); k++)
         waypoints.row(k + 1) = wp_list[k];
 
-    trajGeneration(waypoints);
+    TrajGeneration(waypoints);
 }
 
-void trajGeneration(Eigen::MatrixXd path) {
-    TrajectoryGeneratorWaypoint trajectoryGeneratorWaypoint;
+void TrajGeneration(const Eigen::MatrixXd &path) {
+    TrajectoryGeneratorTool trajectoryGeneratorWaypoint;
 
     MatrixXd vel = MatrixXd::Zero(2, 3);
     MatrixXd acc = MatrixXd::Zero(2, 3);
 
-    vel.row(0) = _startVel;
+    vel.row(0) = start_velocity;
+//    vel.row(1) = Vector3d(-1, -1, -1);//结束点的速度
 
-    _polyTime = timeAllocation(path);
+    ros::Time start_time = ros::Time::now();
+    segment_traj_time = timeAllocation(path);
 
-    _polyCoeff = trajectoryGeneratorWaypoint.PolyQPGeneration(_dev_order, path, vel, acc, _polyTime);
+    poly_coeff = trajectoryGeneratorWaypoint.SolveQPClosedForm(dev_order, path, vel, acc, segment_traj_time);
+    ros::Duration use_time = (ros::Time::now() - start_time);
+    ROS_INFO("\033[1;32m --> Generate trajectory by closed form solution use time: %f (ms)\033[0m",
+             use_time.toSec() * 1000);
 
     visWayPointPath(path);
 
-    visWayPointTraj(_polyCoeff, _polyTime);
+    visWayPointTraj(poly_coeff, segment_traj_time);
 }
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "traj_node");
     ros::NodeHandle nh("~");
 
-    nh.param("planning/vel", _Vel, 1.0);//当前机器人能运行的最大速度
-    nh.param("planning/acc", _Acc, 1.0);//当前机器人能运行的最大加速度
-    nh.param("planning/dev_order", _dev_order, 3);
-    nh.param("planning/min_order", _min_order, 3);
-    nh.param("vis/vis_traj_width", _vis_traj_width, 0.15);
+    nh.param("planning/vel", Vel, 1.0);//当前机器人能运行的最大速度
+    nh.param("planning/acc", Acc, 1.0);//当前机器人能运行的最大加速度
+    nh.param("planning/dev_order", dev_order, 3);
+    nh.param("planning/min_order", min_order, 3);
+    nh.param("vis/vis_traj_width", visualization_traj_width, 0.15);
 
     //_poly_numID is the maximum order of polynomial
-    _poly_num1D = 2 * _dev_order;
+    poly_coeff_num = 2 * dev_order;
 
     //state of start point
-    _startPos(0) = 0;
-    _startPos(1) = 0;
-    _startPos(2) = 0;
+    start_position(0) = 0;
+    start_position(1) = 0;
+    start_position(2) = 0;
 
-    _startVel(0) = 0;
-    _startVel(1) = 0;
-    _startVel(2) = 0;
+    start_velocity(0) = 0;
+    start_velocity(1) = 0;
+    start_velocity(2) = 0;
 
-    _way_pts_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallBack);
+    way_pts_sub = nh.subscribe("waypoints", 1, rcvWaypointsCallBack);
 
-    _wp_traj_vis_pub = nh.advertise<visualization_msgs::Marker>("vis_trajectory", 1);
-    _wp_path_vis_pub = nh.advertise<visualization_msgs::Marker>("vis_waypoint_path", 1);
+    waypoint_traj_vis_pub = nh.advertise<visualization_msgs::Marker>("vis_trajectory", 1);
+    waypoint_path_vis_pub = nh.advertise<visualization_msgs::Marker>("vis_waypoint_path", 1);
 
     ros::Rate rate(100);
     bool status = ros::ok();
@@ -127,9 +136,9 @@ void visWayPointTraj(MatrixXd polyCoeff, VectorXd time) {
     _traj_vis.id = 0;
     _traj_vis.type = visualization_msgs::Marker::SPHERE_LIST;
     _traj_vis.action = visualization_msgs::Marker::ADD;
-    _traj_vis.scale.x = _vis_traj_width;
-    _traj_vis.scale.y = _vis_traj_width;
-    _traj_vis.scale.z = _vis_traj_width;
+    _traj_vis.scale.x = visualization_traj_width;
+    _traj_vis.scale.y = visualization_traj_width;
+    _traj_vis.scale.z = visualization_traj_width;
     _traj_vis.pose.orientation.x = 0.0;
     _traj_vis.pose.orientation.y = 0.0;
     _traj_vis.pose.orientation.z = 0.0;
@@ -164,7 +173,7 @@ void visWayPointTraj(MatrixXd polyCoeff, VectorXd time) {
         }
     }
 
-    _wp_traj_vis_pub.publish(_traj_vis);
+    waypoint_traj_vis_pub.publish(_traj_vis);
 }
 
 void visWayPointPath(MatrixXd path) {
@@ -224,18 +233,25 @@ void visWayPointPath(MatrixXd path) {
         }
     }
 
-    _wp_path_vis_pub.publish(points);
-    _wp_path_vis_pub.publish(line_list);
+    waypoint_path_vis_pub.publish(points);
+    waypoint_path_vis_pub.publish(line_list);
 }
 
+/*!
+ * 求解第k个轨迹段t时刻对应的位置
+ * @param polyCoeff 多项式系数矩阵
+ * @param k 轨迹段序号
+ * @param t 时刻
+ * @return [x,y,z]^T
+ */
 Vector3d getPosPoly(MatrixXd polyCoeff, int k, double t) {
     Vector3d ret;
 
     for (int dim = 0; dim < 3; dim++) {
-        VectorXd coeff = (polyCoeff.row(k)).segment(dim * _poly_num1D, _poly_num1D);
-        VectorXd time = VectorXd::Zero(_poly_num1D);
+        VectorXd coeff = (polyCoeff.row(k)).segment(dim * poly_coeff_num, poly_coeff_num);
+        VectorXd time = VectorXd::Zero(poly_coeff_num);
 
-        for (int j = 0; j < _poly_num1D; j++)
+        for (int j = 0; j < poly_coeff_num; j++)
             if (j == 0)
                 time(j) = 1.0;
             else
@@ -258,30 +274,18 @@ Vector3d getPosPoly(MatrixXd polyCoeff, int k, double t) {
  */
 VectorXd timeAllocation(MatrixXd Path) {
     VectorXd time(Path.rows() - 1);
-//    time.setOnes();
 
-    //由于不想再花时间了，以下求解时间的算法很可能不稳定，会出现负数时间
-    double accel_time = _Vel / _Acc;
-    for (int i = 1; i < Path.size(); ++i) {
+//#define USE_FIXED_TIME
+#ifdef USE_FIXED_TIME
+    time.setOnes();
+#else
+    //由于不想再花时间了，就写了一个简单地时间求解方法，time = 距离/速度/放大系数
+    for (int i = 1; i < Path.rows(); ++i) {
         MatrixXd delta_dist = Path.row(i) - Path.row(i - 1);
-        const double max_dist = delta_dist.maxCoeff();
-
-        if (max_dist < 0.5 * _Acc * accel_time * accel_time) {
-            time(i - 1) = sqrt(max_dist / (0.5 * _Acc));
-            continue;
-        }
-
-        double delta = pow(_Vel, 2) - 4 * _Acc * max_dist;
-        double t1, t2;
-        t1 = (-_Vel + sqrt(delta)) / (2 * _Acc);
-        t2 = (-_Vel - sqrt(delta)) / (2 * _Acc);
-
-        if (min(t1, t2) <= 0) {
-            time(i - 1) = max(t1, t2);
-        } else {
-            time(i - 1) = min(t1, t2);
-        }
+        const double delta_time = delta_dist.array().abs().maxCoeff() / Vel * 0.8;
+        time(i - 1) = delta_time;
     }
+#endif
 
     return time;
 }

@@ -1,19 +1,19 @@
-#ifndef _TRAJECTORY_GENERATOR_WAYPOINT_H_
-#define _TRAJECTORY_GENERATOR_WAYPOINT_H_
+#ifndef _TRAJECTORY_GENERATOR_H_
+#define _TRAJECTORY_GENERATOR_H_
 
 #include <Eigen/Eigen>
 #include <vector>
 
-class TrajectoryGeneratorWaypoint {
+class TrajectoryGeneratorTool {
 private:
     int Factorial(int x);
 
 public:
-    TrajectoryGeneratorWaypoint() = default;
+    TrajectoryGeneratorTool() = default;
 
-    ~TrajectoryGeneratorWaypoint() = default;
+    ~TrajectoryGeneratorTool() = default;
 
-    Eigen::MatrixXd PolyQPGeneration(
+    Eigen::MatrixXd SolveQPClosedForm(
             int order,
             const Eigen::MatrixXd &Path,
             const Eigen::MatrixXd &Vel,
