@@ -2,6 +2,7 @@
 // Created by meng on 2020/9/9.
 //
 #include "trajectory_generator.h"
+#include <iostream>
 
 using namespace std;
 using namespace Eigen;
@@ -125,8 +126,8 @@ Eigen::MatrixXd TrajectoryGeneratorTool::SolveQPClosedForm(
                 if (p_num1d - i <= order || p_num1d - l <= order)
                     continue;
 
-                sub_Q(i, l) = Factorial(p_order - i) / Factorial(p_order - order - i) *
-                              Factorial(p_order - l) / Factorial(p_order - order - l) /
+                sub_Q(i, l) = (Factorial(p_order - i) / Factorial(p_order - order - i)) *
+                              (Factorial(p_order - l) / Factorial(p_order - order - l)) /
                               (p_order - i + p_order - l - (2 * order - 1)) *
                               pow(Time(k), p_order - i + p_order - l - (2 * order - 1));
             }

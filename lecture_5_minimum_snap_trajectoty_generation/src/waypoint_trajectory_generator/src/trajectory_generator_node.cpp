@@ -19,7 +19,8 @@ using namespace Eigen;
 double visualization_traj_width;
 double Vel, Acc;
 int dev_order;//cost函数对应的导数阶数, =3: 最小化jerk =4: 最小化snap
-              //当导数的阶数超过4阶以后，数值发散的很快，此时数值可能不稳定了
+              //当导数的阶数超过一定阶以后，数值发散的很快，此时数值可能不稳定了，
+              //主要原因是会超过int的数值精度范围，目前不能超过6
 int min_order;
 
 ros::Subscriber way_pts_sub;

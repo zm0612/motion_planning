@@ -32,6 +32,18 @@
 
 <img src="doc/experiment_2.png" alt="experiment_2" style="zoom:50%;" />
 
+
+
+另外还分别对同一航迹分别取代价函数为2阶、3阶、4阶、5阶导数，它们的轨迹拟合下过如下：
+
+|                    **二阶(最小化加速度)**                    |                     **三阶(最小化jerk)**                     |
+| :----------------------------------------------------------: | :----------------------------------------------------------: |
+| <img src="doc/order_2.png" alt="order_2" style="zoom:33%;" /> | <img src="doc/order_3.png" alt="order_3" style="zoom:33%;" /> |
+|                     四阶(最小化snap)****                     |                     **五阶(最小化snap)**                     |
+| <img src="doc/order_4.png" alt="order_4" style="zoom:33%;" /> | <img src="doc/order_5.png" alt="order_5" style="zoom:33%;" /> |
+
+
+
 ## 2. 优化求解
 
 TODO
