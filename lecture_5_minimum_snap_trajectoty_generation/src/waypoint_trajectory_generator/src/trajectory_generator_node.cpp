@@ -275,19 +275,29 @@ Vector3d getPosPoly(MatrixXd polyCoeff, int k, double t) {
  * @return 每段轨迹应该对应的时间
  */
 VectorXd timeAllocation(MatrixXd Path) {
-    VectorXd time(Path.rows() - 1);
+    VectorXd times(Path.rows() - 1);
 
 //#define USE_FIXED_TIME
 #ifdef USE_FIXED_TIME
-    time.setOnes();
+    times.setOnes();
 #else
-    //由于不想再花时间了，就写了一个简单地时间求解方法，time = 距离/速度/放大系数
-    for (int i = 1; i < Path.rows(); ++i) {
-        MatrixXd delta_dist = Path.row(i) - Path.row(i - 1);
-        const double delta_time = delta_dist.array().abs().maxCoeff() / Vel * 0.8;
-        time(i - 1) = delta_time;
+    const double MAX_VEL = 1.0;
+    const double MAX_ACCEL = 1.0;
+    const double t = MAX_VEL / MAX_ACCEL;
+    const double dist_threshold_1 = MAX_ACCEL * t * t;
+
+    double segment_t;
+    for (unsigned int i = 1; i < Path.rows(); ++i) {
+        double delta_dist = (Path.row(i) - Path.row(i - 1)).norm();
+        if (delta_dist > dist_threshold_1) {
+            segment_t = t * 2 + (delta_dist - dist_threshold_1) / MAX_VEL;
+        } else {
+            segment_t = std::sqrt(delta_dist / MAX_ACCEL);
+        }
+
+        times[i - 1] = segment_t;
     }
 #endif
 
-    return time;
+    return times;
 }
