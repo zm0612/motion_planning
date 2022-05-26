@@ -38,3 +38,4 @@ roslaunch grid_path_searcher compare_demo.launch
 
 RRT这种基于采样的方法，原理非常简单，思路也很朴素。在解决路径搜索问题上，显得很笨拙。在将自己实现的RRT和RRT star用于50mX50mX10m的地图时，几乎都不能在10s之内搜索到一条路径。及时用ompl库的RRT star算法其速度也没有JPS或者A star速度快，100mX100mX20m的地图，A star和JPS都能在毫秒级完成搜索。所以暂时没有发现RRT系列算法比A star或者JPS等基于图搜索方法的优异之处。虽然没有发现，但是不代表没有优势，后续的研究中将继续探索基于采样方式的路径搜索算法。
 
+补充：后来我花了一些对RRT和A star做了比较细致的对比，其中也发现了RRT的优势，可以参考我的[博客](https://blog.csdn.net/u011341856/article/details/122002858?spm=1001.2014.3001.5501)
